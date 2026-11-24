@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Shape Evolution 3D</title>
+    <title>Neon Shape Evolution 3D 500</title>
     
     <!-- [OPTION A] CRAZYGAMES SDK v3 (Commented out for GameMonetize): -->
     <!-- <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script> -->
@@ -28,10 +28,10 @@
     </script>
     -->
 
-    <!-- [OPTION C] GAMEMONETIZE SDK (ACTIVE WITH YOUR GAME ID): -->
+    <!-- [OPTION C] GAMEMONETIZE SDK (ACTIVE WITH YOUR NEW GAME ID): -->
     <script type="text/javascript">
         window.SDK_OPTIONS = {
-            gameId: "5cx5i3oip1bgcj630e0pyrma9fvn46nl",
+            gameId: "eceda687iwwrhafaw43t3oerrojg3kl",
             onEvent: function (a) {
                 switch (a.name) {
                     case "SDK_GAME_PAUSE": if(window.game) window.game.pause(); break;
@@ -114,7 +114,7 @@
     <!-- MAIN MENU -->
     <div class="modal-screen" id="screen-menu">
         <div class="level-badge">500 HANDCRAFTED LEVELS</div>
-        <h1 class="game-title">NEON SHAPE<br>EVOLUTION <span>3D</span></h1>
+        <h1 class="game-title">NEON SHAPE<br>EVOLUTION <span>3D 500</span></h1>
         <p class="subtitle">Collect glowing energy gems to evolve your geometric form, dodge lasers, and reach the portal!</p>
         <button class="btn-primary" id="btn-play">PLAY LEVEL <span id="menu-lvl-num">1</span></button>
         <div style="margin-top:14px; color:#ffd700; font-weight:700;">HIGH SCORE: <span id="menu-highscore">0</span></div>
@@ -447,5 +447,4 @@ class ShapeEvolutionGame {
     initThree() {
         const canvas = document.getElementById('game-canvas');
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-  
+        this.renderer.setSize(window.innerWidth, window.inner
