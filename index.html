@@ -443,4 +443,773 @@
             try {
                 if (!this.ctx) {
                     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    if (AudioCtx) this.ctx = new AudioCtx
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+            } catch (e) {}
+        }
+        playTone(freq, type, duration, vol = 0.14, slideTo = null) {
+            if (this.muted || !this.ctx) return;
+            try {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + duration);
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            } catch (e) {}
+        }
+        playGem() { this.playTone(680, "sine", 0.14, 0.16, 1180); }
+        playCoin() { this.playTone(920, "triangle", 0.16, 0.16, 1380); }
+        playJump() { this.playTone(220, "sine", 0.22, 0.18, 520); }
+        playCrash() { this.playTone(140, "sawtooth", 0.4, 0.25, 42); }
+        playEvolve() { [440, 554, 659, 880].forEach((n, i) => setTimeout(() => this.playTone(n, "triangle", 0.24, 0.18), i * 65)); }
+        playVictory() { [523, 659, 784, 1046].forEach((n, i) => setTimeout(() => this.playTone(n, "sine", 0.3, 0.2), i * 90)); }
+        startBGM() {
+            this.stopBGM();
+            const notes = [130.81, 164.81, 196.00, 164.81, 146.83, 174.61, 220.00, 196.00];
+            let step = 0;
+            this.bgmInterval = setInterval(() => {
+                if (!this.muted && this.ctx && this.ctx.state === "running") {
+                    this.playTone(notes[step % notes.length], "sine", 0.26, 0.04);
+                    step++;
+                }
+            }, 320);
+        }
+        stopBGM() { if (this.bgmInterval) { clearInterval(this.bgmInterval); this.bgmInterval = null; } }
+    }
+
+    const SaveManager = {
+        KEY: "shape_evolution_3d_save_v1",
+        data: { unlockedLevel: 1, selectedLevel: 1, highScore: 0, totalGems: 0, totalCoins: 0, lastDailyClaim: "", muted: false },
+        load() { try { const r = localStorage.getItem(this.KEY); if (r) Object.assign(this.data, JSON.parse(r)); } catch (e) {} },
+        save() { try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); } catch (e) {} },
+        canClaimDaily() { return this.data.lastDailyClaim !== new Date().toISOString().slice(0, 10); },
+        claimDaily() {
+            if (!this.canClaimDaily()) return false;
+            this.data.lastDailyClaim = new Date().toISOString().slice(0, 10);
+            this.data.totalCoins += 100;
+            this.save();
+            return true;
+        }
+    };
+
+    class ShapeEvolutionGame {
+        constructor() {
+            SaveManager.load();
+            PortalBridge.init();
+            this.sound = new SoundEngine();
+            this.sound.muted = SaveManager.data.muted;
+
+            this.canvas = document.getElementById("game-canvas");
+            this.ctx = this.canvas.getContext("2d");
+
+            this.state = "MENU";
+            this.mode = "classic";
+            this.currentLevelNum = SaveManager.data.selectedLevel || 1;
+            this.levelConfig = LEVELS_DATA[0];
+
+            this.score = 0;
+            this.runGems = 0;
+            this.runCoins = 0;
+            this.currentFormIdx = 0;
+            this.timeLeft = 60;
+            this.invulnerableTimer = 0;
+
+            this.trackWidth = 8.4;
+            this.playerX = 0;
+            this.targetX = 0;
+            this.playerY = 0;
+            this.playerZ = 0;
+            this.velocityY = 0;
+            this.isGrounded = true;
+            this.spinAngle = 0;
+
+            this.obstacles = [];
+            this.collectibles = [];
+            this.particles = [];
+            this.nextSpawnZ = 30;
+
+            this.resize();
+            this.bindInputs();
+            this.updateMenuUI();
+
+            this.lastTime = performance.now();
+            this.loop = this.loop.bind(this);
+            requestAnimationFrame(this.loop);
+        }
+
+        resize() {
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            this.width = window.innerWidth;
+            this.height = window.innerHeight;
+            this.canvas.width = this.width * dpr;
+            this.canvas.height = this.height * dpr;
+            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        project(wx, wy, wz) {
+            const camY = 4.6;
+            const camZ = -7.5;
+            const dz = wz - camZ;
+            if (dz <= 0.2) return null;
+            const fov = Math.min(this.width, this.height) * 0.92;
+            const scale = fov / dz;
+            const sx = this.width * 0.5 + (wx - this.playerX * 0.35) * scale;
+            const sy = this.height * 0.44 - (wy - camY) * scale;
+            return { x: sx, y: sy, scale, dz };
+        }
+
+        setMode(mode, btnEl) {
+            this.mode = mode;
+            document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
+            if (btnEl) btnEl.classList.add("active");
+            document.getElementById("level-select-row").style.display =
+                (mode === "classic" || mode === "time") ? "flex" : "none";
+        }
+
+        changeLevel(delta) {
+            const next = this.currentLevelNum + delta;
+            if (next >= 1 && next <= SaveManager.data.unlockedLevel) {
+                this.currentLevelNum = next;
+                document.getElementById("selected-level-num").textContent = this.currentLevelNum;
+            }
+        }
+
+        handleDaily() {
+            if (SaveManager.claimDaily()) {
+                this.sound.init();
+                this.sound.playCoin();
+                this.updateMenuUI();
+            }
+        }
+
+        toggleMute() {
+            this.sound.muted = !this.sound.muted;
+            SaveManager.data.muted = this.sound.muted;
+            SaveManager.save();
+            document.getElementById("btn-mute").textContent = this.sound.muted ? "🔇" : "🔊";
+        }
+
+        pauseGame() {
+            if (this.state === "PLAYING") {
+                this.state = "PAUSED";
+                PortalBridge.gameplayStop();
+                this.showScreen("pause-screen");
+            }
+        }
+
+        resumeGame() {
+            this.state = "PLAYING";
+            PortalBridge.gameplayStart();
+            this.showScreen("hud");
+        }
+
+        retryLevel() {
+            PortalBridge.showInterstitial(() => this.startLevel(this.currentLevelNum));
+        }
+
+        nextLevel() {
+            const next = Math.min(500, this.currentLevelNum + 1);
+            PortalBridge.showInterstitial(() => this.startLevel(next));
+        }
+
+        revivePlayer() {
+            PortalBridge.showRewarded(() => {
+                this.invulnerableTimer = 3.0;
+                this.playerX = 0;
+                this.targetX = 0;
+                this.state = "PLAYING";
+                this.sound.startBGM();
+                this.showScreen("hud");
+                PortalBridge.gameplayStart();
+            });
+        }
+
+        doubleCoins(btnEl) {
+            PortalBridge.showRewarded(() => {
+                SaveManager.data.totalCoins += this.lastEarnedCoins;
+                SaveManager.save();
+                document.getElementById("vic-coins").textContent = `+${this.lastEarnedCoins * 2}`;
+                if (btnEl) btnEl.disabled = true;
+            });
+        }
+
+        goHome() {
+            this.state = "MENU";
+            this.sound.stopBGM();
+            this.updateMenuUI();
+            this.showScreen("menu-screen");
+        }
+
+        startLevel(levelNum) {
+            this.sound.init();
+            this.sound.startBGM();
+
+            this.currentLevelNum = levelNum || 1;
+            this.levelConfig = LEVELS_DATA[(this.currentLevelNum - 1) % LEVELS_DATA.length];
+
+            this.playerX = 0;
+            this.targetX = 0;
+            this.playerY = 0;
+            this.playerZ = 0;
+            this.velocityY = 0;
+            this.isGrounded = true;
+            this.score = 0;
+            this.runGems = 0;
+            this.runCoins = 0;
+            this.currentFormIdx = 0;
+            this.invulnerableTimer = 1.0;
+            this.timeLeft = this.mode === "time" ? this.levelConfig.timeLimit : 60;
+
+            this.obstacles = [];
+            this.collectibles = [];
+            this.particles = [];
+            this.nextSpawnZ = 28;
+            this.populateAhead();
+            this.updateEvolutionHUD();
+
+            this.state = "PLAYING";
+            this.showScreen("hud");
+            document.getElementById("hud-level").textContent = this.mode === "endless" ? "∞" : this.currentLevelNum;
+            document.getElementById("timer-pill").style.display = this.mode === "time" ? "block" : "none";
+            this.updateHUD();
+            PortalBridge.gameplayStart();
+        }
+
+        populateAhead() {
+            const horizon = this.playerZ + 140;
+            const limitZ = (this.mode === "classic" || this.mode === "time") ? this.levelConfig.length - 18 : 9999999;
+            while (this.nextSpawnZ < horizon && this.nextSpawnZ < limitZ) {
+                this.spawnWave(this.nextSpawnZ);
+                this.nextSpawnZ += this.levelConfig.obstacleSpacing;
+            }
+        }
+
+        spawnWave(zPos) {
+            const pool = this.levelConfig.availableObstacles;
+            const type = pool[Math.floor(Math.random() * pool.length)];
+            const laneX = (Math.random() - 0.5) * (this.trackWidth - 2.4);
+
+            this.obstacles.push({
+                type,
+                x: type === "moving_wall" ? 0 : laneX,
+                y: 0,
+                z: zPos,
+                phase: Math.random() * Math.PI * 2,
+                triggered: false
+            });
+
+            const gemX = laneX > 0 ? -2.2 : 2.2;
+            const isCoin = Math.random() < 0.32;
+            this.collectibles.push({
+                type: isCoin ? "coin" : "gem",
+                x: gemX,
+                y: 0.6,
+                z: zPos + 4.5,
+                collected: false
+            });
+        }
+
+        spawnParticles(wx, wy, wz, color, count = 14) {
+            for (let i = 0; i < count; i++) {
+                this.particles.push({
+                    x: wx, y: wy, z: wz,
+                    vx: (Math.random() - 0.5) * 9,
+                    vy: Math.random() * 7 + 2,
+                    vz: (Math.random() - 0.5) * 9,
+                    color,
+                    life: 0.6
+                });
+            }
+        }
+
+        jump() {
+            if (this.state !== "PLAYING" || !this.isGrounded) return;
+            this.velocityY = 12.5 * EVOLUTION_FORMS[this.currentFormIdx].jumpBonus;
+            this.isGrounded = false;
+            this.sound.playJump();
+        }
+
+        update(dt) {
+            this.spinAngle += dt * 3.0;
+
+            for (let i = this.particles.length - 1; i >= 0; i--) {
+                const p = this.particles[i];
+                p.life -= dt;
+                p.vy -= 20 * dt;
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.z += p.vz * dt;
+                if (p.life <= 0) this.particles.splice(i, 1);
+            }
+
+            if (this.state !== "PLAYING") return;
+
+            if (this.invulnerableTimer > 0) this.invulnerableTimer -= dt;
+
+            if (this.mode === "time") {
+                this.timeLeft -= dt;
+                document.getElementById("hud-timer").textContent = Math.max(0, Math.ceil(this.timeLeft));
+                if (this.timeLeft <= 0) { this.triggerGameOver("Time ran out!"); return; }
+            }
+
+            const form = EVOLUTION_FORMS[this.currentFormIdx];
+            const endlessRamp = this.mode === "endless" ? Math.min(this.playerZ * 0.012, 16) : 0;
+            const speed = (this.levelConfig.baseSpeed + endlessRamp) * form.speedBonus;
+
+            this.playerZ += speed * dt;
+            this.score += Math.floor(speed * dt * 2.5);
+
+            const maxSide = this.trackWidth / 2 - 0.75;
+            this.targetX = Math.max(-maxSide, Math.min(maxSide, this.targetX));
+            this.playerX += (this.targetX - this.playerX) * Math.min(1, dt * 14);
+
+            if (!this.isGrounded) {
+                this.velocityY -= 30 * dt;
+                this.playerY += this.velocityY * dt;
+                if (this.playerY <= 0) { this.playerY = 0; this.velocityY = 0; this.isGrounded = true; }
+            }
+
+            this.populateAhead();
+
+            for (let i = this.collectibles.length - 1; i >= 0; i--) {
+                const c = this.collectibles[i];
+                const relZ = c.z - this.playerZ;
+                if (!c.collected && Math.abs(relZ) < 1.3 && Math.abs(c.x - this.playerX) < 1.25 && this.playerY < 1.8) {
+                    c.collected = true;
+                    if (c.type === "gem") {
+                        this.runGems++;
+                        this.score += 50;
+                        this.sound.playGem();
+                        this.spawnParticles(c.x, 0.7, relZ, "#00f0ff", 12);
+                        this.checkEvolution();
+                    } else {
+                        this.runCoins++;
+                        this.score += 25;
+                        this.sound.playCoin();
+                        this.spawnParticles(c.x, 0.7, relZ, "#ffd700", 12);
+                    }
+                    this.updateHUD();
+                }
+                if (c.collected || relZ < -10) this.collectibles.splice(i, 1);
+            }
+
+            const t = performance.now() * 0.0026;
+            for (let i = this.obstacles.length - 1; i >= 0; i--) {
+                const o = this.obstacles[i];
+                const relZ = o.z - this.playerZ;
+
+                if (o.type === "moving_block" || o.type === "moving_wall") {
+                    o.x = Math.sin(t + o.phase) * (this.trackWidth / 2 - 1.5);
+                } else if (o.type === "falling_platform") {
+                    if (relZ < 14) o.triggered = true;
+                    if (o.triggered) o.y -= dt * 2.5;
+                }
+
+                if (this.invulnerableTimer <= 0 && Math.abs(relZ) < 0.95 && o.y > -1.2) {
+                    let halfW = 1.05, hitH = 1.3;
+                    if (o.type === "moving_wall") { halfW = 1.65; hitH = 1.9; }
+                    else if (o.type === "spinning_blade") { halfW = 1.85; hitH = 1.05; }
+                    else if (o.type === "laser_gate") { halfW = 1.9; hitH = 1.6; }
+                    else if (o.type === "energy_barrier") { halfW = 1.5; hitH = 0.95; }
+
+                    if (Math.abs(o.x - this.playerX) < halfW && this.playerY < hitH) {
+                        this.sound.playCrash();
+                        this.spawnParticles(this.playerX, this.playerY + 0.6, 0, "#ff2a55", 24);
+                        this.triggerGameOver("You hit a 3D geometric hazard!");
+                        return;
+                    }
+                }
+                if (relZ < -12) this.obstacles.splice(i, 1);
+            }
+
+            if ((this.mode === "classic" || this.mode === "time") && this.playerZ >= this.levelConfig.length) {
+                this.triggerVictory();
+            } else if (this.mode === "evolution" && this.currentFormIdx === EVOLUTION_FORMS.length - 1) {
+                this.triggerVictory();
+            }
+
+            this.updateHUD();
+        }
+
+        render() {
+            const ctx = this.ctx;
+            const theme = this.levelConfig.theme;
+
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height * 0.55);
+            skyGrad.addColorStop(0, theme.skyTop);
+            skyGrad.addColorStop(1, theme.skyBot);
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, this.width, this.height);
+
+            ctx.fillStyle = "#04060d";
+            ctx.fillRect(0, this.height * 0.44, this.width, this.height * 0.56);
+
+            const halfW = this.trackWidth / 2;
+            const nearL = this.project(-halfW, 0, -4);
+            const nearR = this.project(halfW, 0, -4);
+            const farL = this.project(-halfW, 0, 140);
+            const farR = this.project(halfW, 0, 140);
+
+            if (nearL && nearR && farL && farR) {
+                ctx.beginPath();
+                ctx.moveTo(nearL.x, nearL.y); ctx.lineTo(nearR.x, nearR.y);
+                ctx.lineTo(farR.x, farR.y); ctx.lineTo(farL.x, farL.y);
+                ctx.closePath();
+                ctx.fillStyle = theme.road;
+                ctx.fill();
+
+                ctx.strokeStyle = theme.grid;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(nearL.x, nearL.y); ctx.lineTo(farL.x, farL.y);
+                ctx.moveTo(nearR.x, nearR.y); ctx.lineTo(farR.x, farR.y);
+                ctx.stroke();
+
+                ctx.strokeStyle = theme.grid + "33";
+                ctx.lineWidth = 1.5;
+                const gridStep = 10;
+                const offsetZ = -(this.playerZ % gridStep);
+                for (let z = offsetZ; z < 140; z += gridStep) {
+                    if (z < -2) continue;
+                    const p1 = this.project(-halfW, 0, z);
+                    const p2 = this.project(halfW, 0, z);
+                    if (p1 && p2) {
+                        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+                    }
+                }
+            }
+
+            if (this.mode === "classic" || this.mode === "time") {
+                const finRelZ = this.levelConfig.length - this.playerZ;
+                if (finRelZ > -2 && finRelZ < 140) {
+                    const f1 = this.project(-halfW, 0.05, finRelZ);
+                    const f2 = this.project(halfW, 0.05, finRelZ);
+                    if (f1 && f2) {
+                        ctx.strokeStyle = "#00ff88";
+                        ctx.lineWidth = Math.max(4, f1.scale * 0.4);
+                        ctx.beginPath(); ctx.moveTo(f1.x, f1.y); ctx.lineTo(f2.x, f2.y); ctx.stroke();
+                    }
+                }
+            }
+
+            const renderList = [];
+            for (const o of this.obstacles) {
+                const rz = o.z - this.playerZ;
+                if (rz > -4 && rz < 140) renderList.push({ kind: "obs", obj: o, rz });
+            }
+            for (const c of this.collectibles) {
+                const rz = c.z - this.playerZ;
+                if (!c.collected && rz > -4 && rz < 140) renderList.push({ kind: "col", obj: c, rz });
+            }
+            renderList.push({ kind: "player", rz: 0 });
+            renderList.sort((a, b) => b.rz - a.rz);
+
+            for (const item of renderList) {
+                if (item.kind === "obs") this.drawObstacle(item.obj, item.rz);
+                else if (item.kind === "col") this.drawCollectible(item.obj, item.rz);
+                else this.drawPlayer();
+            }
+
+            for (const p of this.particles) {
+                const pr = this.project(p.x, p.y, p.z);
+                if (pr) {
+                    ctx.fillStyle = p.color;
+                    const sz = Math.max(2, pr.scale * 0.16 * p.life);
+                    ctx.fillRect(pr.x - sz / 2, pr.y - sz / 2, sz, sz);
+                }
+            }
+        }
+
+        draw3DBox(wx, wy, wz, w, h, d, topCol, frontCol) {
+            const p000 = this.project(wx - w/2, wy, wz - d/2);
+            const p100 = this.project(wx + w/2, wy, wz - d/2);
+            const p010 = this.project(wx - w/2, wy + h, wz - d/2);
+            const p110 = this.project(wx + w/2, wy + h, wz - d/2);
+            const p011 = this.project(wx - w/2, wy + h, wz + d/2);
+            const p111 = this.project(wx + w/2, wy + h, wz + d/2);
+            if (!p000 || !p100 || !p010 || !p110 || !p011 || !p111) return;
+
+            const ctx = this.ctx;
+            ctx.fillStyle = topCol;
+            ctx.beginPath();
+            ctx.moveTo(p010.x, p010.y); ctx.lineTo(p110.x, p110.y);
+            ctx.lineTo(p111.x, p111.y); ctx.lineTo(p011.x, p011.y);
+            ctx.closePath(); ctx.fill();
+
+            ctx.fillStyle = frontCol;
+            ctx.beginPath();
+            ctx.moveTo(p000.x, p000.y); ctx.lineTo(p100.x, p100.y);
+            ctx.lineTo(p110.x, p110.y); ctx.lineTo(p010.x, p010.y);
+            ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = "rgba(255,255,255,0.28)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        drawObstacle(o, rz) {
+            const ctx = this.ctx;
+            if (o.type === "moving_block") this.draw3DBox(o.x, o.y, rz, 2.0, 1.4, 1.4, "#ff6b8b", "#ff1e4d");
+            else if (o.type === "moving_wall") this.draw3DBox(o.x, o.y, rz, 3.2, 2.0, 0.9, "#fb7185", "#e11d48");
+            else if (o.type === "falling_platform") this.draw3DBox(o.x, o.y, rz, 2.5, 0.45, 2.8, "#c084fc", "#9333ea");
+            else if (o.type === "energy_barrier") this.draw3DBox(o.x, o.y, rz, 3.0, 1.0, 0.4, "#67e8f9", "rgba(0,240,255,0.75)");
+            else if (o.type === "laser_gate") {
+                this.draw3DBox(o.x - 1.8, 0, rz, 0.45, 2.4, 0.45, "#64748b", "#334155");
+                this.draw3DBox(o.x + 1.8, 0, rz, 0.45, 2.4, 0.45, "#64748b", "#334155");
+                const b1 = this.project(o.x - 1.8, 1.3, rz);
+                const b2 = this.project(o.x + 1.8, 1.3, rz);
+                if (b1 && b2) {
+                    ctx.strokeStyle = "#ff0044";
+                    ctx.lineWidth = Math.max(3, b1.scale * 0.16);
+                    ctx.beginPath(); ctx.moveTo(b1.x, b1.y); ctx.lineTo(b2.x, b2.y); ctx.stroke();
+                }
+            } else if (o.type === "spinning_blade") {
+                const c = this.project(o.x, 0.85, rz);
+                if (c) {
+                    const r = c.scale * 1.85;
+                    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(this.spinAngle * 2);
+                    ctx.fillStyle = "#ffaa00";
+                    ctx.fillRect(-r, -r * 0.14, r * 2, r * 0.28);
+                    ctx.fillRect(-r * 0.14, -r, r * 0.28, r * 2);
+                    ctx.restore();
+                }
+            }
+        }
+
+        drawCollectible(c, rz) {
+            const p = this.project(c.x, c.y + Math.sin(this.spinAngle + rz) * 0.15, rz);
+            if (!p) return;
+            const ctx = this.ctx;
+            const r = Math.max(5, p.scale * 0.42);
+            ctx.save(); ctx.translate(p.x, p.y);
+            if (c.type === "coin") {
+                ctx.fillStyle = "#ffd700";
+                ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke();
+            } else {
+                ctx.rotate(this.spinAngle);
+                ctx.fillStyle = "#00f0ff";
+                ctx.beginPath();
+                ctx.moveTo(0, -r * 1.2); ctx.lineTo(r * 0.9, 0);
+                ctx.lineTo(0, r * 1.2); ctx.lineTo(-r * 0.9, 0);
+                ctx.closePath(); ctx.fill();
+                ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        drawPlayer() {
+            const form = EVOLUTION_FORMS[this.currentFormIdx];
+            const shadow = this.project(this.playerX, 0.02, 0);
+            const center = this.project(this.playerX, this.playerY + 0.65, 0);
+            if (!center) return;
+
+            const ctx = this.ctx;
+            const r = center.scale * 0.65 * form.scale;
+
+            if (shadow) {
+                ctx.fillStyle = "rgba(0,0,0,0.45)";
+                ctx.beginPath(); ctx.ellipse(shadow.x, shadow.y, r * 1.05, r * 0.42, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = form.color; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.ellipse(shadow.x, shadow.y, r * 1.25, r * 0.5, 0, 0, Math.PI * 2); ctx.stroke();
+            }
+
+            if (this.invulnerableTimer > 0 && Math.floor(this.invulnerableTimer * 12) % 2 === 0) return;
+
+            ctx.save();
+            ctx.translate(center.x, center.y);
+            ctx.shadowColor = form.color;
+            ctx.shadowBlur = 18;
+            ctx.fillStyle = form.color;
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+
+            if (this.currentFormIdx === 0) {
+                this.draw3DBox(this.playerX, this.playerY, 0, 1.15, 1.15, 1.15, "#80f8ff", "#00f0ff");
+            } else if (this.currentFormIdx === 1) {
+                const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+                grad.addColorStop(0, "#ffffff"); grad.addColorStop(0.4, form.color); grad.addColorStop(1, "#004422");
+                ctx.fillStyle = grad;
+                ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            } else if (this.currentFormIdx === 2) {
+                ctx.beginPath(); ctx.moveTo(0, -r * 1.2); ctx.lineTo(r * 1.1, r * 0.85); ctx.lineTo(-r * 1.1, r * 0.85); ctx.closePath(); ctx.fill(); ctx.stroke();
+            } else if (this.currentFormIdx === 3) {
+                ctx.beginPath(); ctx.moveTo(0, -r * 1.25); ctx.lineTo(r, 0); ctx.lineTo(0, r * 1.25); ctx.lineTo(-r, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+            } else if (this.currentFormIdx === 4) {
+                ctx.rotate(this.spinAngle * 0.5);
+                ctx.beginPath();
+                for (let k = 0; k < 6; k++) {
+                    const ang = (k * Math.PI) / 3;
+                    const px = Math.cos(ang) * r, py = Math.sin(ang) * r;
+                    k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+                }
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+            } else if (this.currentFormIdx === 5) {
+                ctx.rotate(-this.spinAngle * 0.7);
+                ctx.beginPath();
+                for (let k = 0; k < 8; k++) {
+                    const rad = k % 2 === 0 ? r * 1.25 : r * 0.55;
+                    const ang = (k * Math.PI) / 4;
+                    const px = Math.cos(ang) * rad, py = Math.sin(ang) * rad;
+                    k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+                }
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+            } else {
+                ctx.rotate(this.spinAngle);
+                ctx.beginPath(); ctx.arc(0, 0, r * 0.75, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = "#00f0ff"; ctx.lineWidth = 3;
+                ctx.strokeRect(-r * 0.95, -r * 0.95, r * 1.9, r * 1.9);
+            }
+            ctx.restore();
+        }
+
+        checkEvolution() {
+            for (let i = EVOLUTION_FORMS.length - 1; i >= 0; i--) {
+                if (this.runGems >= EVOLUTION_FORMS[i].requiredGems && i > this.currentFormIdx) {
+                    this.currentFormIdx = i;
+                    this.sound.playEvolve();
+                    this.spawnParticles(this.playerX, this.playerY + 0.7, 0, EVOLUTION_FORMS[i].color, 26);
+                    break;
+                }
+            }
+            this.updateEvolutionHUD();
+        }
+
+        updateEvolutionHUD() {
+            const curr = EVOLUTION_FORMS[this.currentFormIdx];
+            const next = EVOLUTION_FORMS[this.currentFormIdx + 1];
+            document.getElementById("evo-stage-name").textContent = curr.name;
+            if (!next) {
+                document.getElementById("evo-next-name").textContent = "MAX FORM REACHED!";
+                document.getElementById("evo-progress-fill").style.width = "100%";
+            } else {
+                document.getElementById("evo-next-name").textContent = `NEXT: ${next.shortName} (${next.requiredGems} GEMS)`;
+                const span = next.requiredGems - curr.requiredGems;
+                const prog = Math.max(0, Math.min(100, ((this.runGems - curr.requiredGems) / span) * 100));
+                document.getElementById("evo-progress-fill").style.width = `${prog}%`;
+            }
+        }
+
+        updateHUD() {
+            document.getElementById("hud-score").textContent = this.score;
+            document.getElementById("hud-gems").textContent = this.runGems;
+        }
+
+        triggerGameOver(reason) {
+            this.state = "GAMEOVER";
+            this.sound.stopBGM();
+            PortalBridge.gameplayStop();
+            if (this.score > SaveManager.data.highScore) SaveManager.data.highScore = this.score;
+            SaveManager.data.totalGems += this.runGems;
+            SaveManager.data.totalCoins += this.runCoins;
+            SaveManager.save();
+
+            document.getElementById("gameover-reason").textContent = reason;
+            document.getElementById("go-score").textContent = this.score;
+            document.getElementById("go-highscore").textContent = SaveManager.data.highScore;
+            document.getElementById("go-form").textContent = EVOLUTION_FORMS[this.currentFormIdx].shortName;
+            this.showScreen("gameover-screen");
+        }
+
+        triggerVictory() {
+            this.state = "VICTORY";
+            this.sound.stopBGM();
+            this.sound.playVictory();
+            PortalBridge.gameplayStop();
+
+            const bonusCoins = this.levelConfig.coinReward + this.runCoins;
+            if (this.score > SaveManager.data.highScore) SaveManager.data.highScore = this.score;
+            SaveManager.data.totalGems += this.runGems;
+            SaveManager.data.totalCoins += bonusCoins;
+
+            if (this.mode === "classic" && this.currentLevelNum >= SaveManager.data.unlockedLevel && this.currentLevelNum < 500) {
+                SaveManager.data.unlockedLevel = this.currentLevelNum + 1;
+                SaveManager.data.selectedLevel = SaveManager.data.unlockedLevel;
+            }
+            SaveManager.save();
+
+            this.lastEarnedCoins = bonusCoins;
+            document.getElementById("vic-score").textContent = this.score;
+            document.getElementById("vic-coins").textContent = `+${bonusCoins}`;
+            document.getElementById("vic-form").textContent = EVOLUTION_FORMS[this.currentFormIdx].shortName;
+            document.getElementById("btn-double-coins").disabled = false;
+            this.showScreen("victory-screen");
+        }
+
+        showScreen(id) {
+            ["hud", "menu-screen", "pause-screen", "gameover-screen", "victory-screen"].forEach(s => {
+                document.getElementById(s).classList.toggle("hidden", s !== id);
+            });
+        }
+
+        updateMenuUI() {
+            document.getElementById("menu-gems").textContent = SaveManager.data.totalGems;
+            document.getElementById("menu-coins").textContent = SaveManager.data.totalCoins;
+            document.getElementById("menu-highscore").textContent = SaveManager.data.highScore;
+            document.getElementById("selected-level-num").textContent = this.currentLevelNum;
+            document.getElementById("btn-mute").textContent = this.sound.muted ? "🔇" : "🔊";
+
+            const dailyBtn = document.getElementById("btn-daily-reward");
+            if (SaveManager.canClaimDaily()) {
+                dailyBtn.disabled = false;
+                dailyBtn.textContent = "🎁 CLAIM DAILY REWARD (+100 COINS)";
+            } else {
+                dailyBtn.disabled = true;
+                dailyBtn.textContent = "✅ DAILY REWARD CLAIMED";
+            }
+        }
+
+        bindInputs() {
+            window.addEventListener("resize", () => this.resize());
+
+            window.addEventListener("keydown", (e) => {
+                if (this.state !== "PLAYING") return;
+                const step = 1.45;
+                if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") this.targetX -= step;
+                if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") this.targetX += step;
+                if (e.key === "ArrowUp" || e.key === "w" || e.key === "W" || e.key === " ") this.jump();
+            });
+
+            let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+            this.canvas.addEventListener("touchstart", (e) => {
+                if (e.touches.length > 0) {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                    touchStartTime = performance.now();
+                }
+            }, { passive: true });
+
+            this.canvas.addEventListener("touchmove", (e) => {
+                if (this.state !== "PLAYING" || e.touches.length === 0) return;
+                const dx = e.touches[0].clientX - touchStartX;
+                touchStartX = e.touches[0].clientX;
+                this.targetX += (dx / this.width) * (this.trackWidth * 1.45);
+            }, { passive: true });
+
+            this.canvas.addEventListener("touchend", (e) => {
+                if (this.state !== "PLAYING") return;
+                const elapsed = performance.now() - touchStartTime;
+                const dy = e.changedTouches[0] ? touchStartY - e.changedTouches[0].clientY : 0;
+                if (elapsed < 220 || dy > 35) this.jump();
+            }, { passive: true });
+        }
+
+        loop(now) {
+            requestAnimationFrame(this.loop);
+            const dt = Math.min((now - this.lastTime) / 1000, 0.05);
+            this.lastTime = now;
+            this.update(dt);
+            this.render();
+        }
+    }
+
+    window.game = new ShapeEvolutionGame();
+    </script>
+</body>
+</html>
