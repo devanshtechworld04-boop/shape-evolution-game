@@ -46,47 +46,33 @@
     -->
 
     <style>
-        :root {
-            --bg-dark: #070b19;
-            --panel-bg: rgba(13, 21, 45, 0.92);
-            --accent: #00f0ff;
-            --accent-2: #ff007f;
-            --gold: #ffd700;
-            --success: #00ff88;
-            --text-main: #ffffff;
-            --text-muted: #94a3b8;
-        }
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
             -webkit-tap-highlight-color: transparent;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
         }
         html, body {
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
+            background: #070b19;
+            color: #ffffff;
         }
         #game-canvas {
             position: fixed;
-            inset: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             display: block;
             z-index: 1;
             touch-action: none;
         }
         .hidden { display: none !important; }
 
-        /* HUD */
         #hud {
             position: fixed;
-            inset: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             z-index: 10;
             pointer-events: none;
             display: flex;
@@ -102,37 +88,32 @@
         }
         .hud-stats { display: flex; flex-wrap: wrap; gap: 8px; }
         .stat-pill {
-            background: rgba(10, 18, 38, 0.85);
-            border: 1px solid rgba(0, 240, 255, 0.4);
+            background: rgba(10, 18, 38, 0.88);
+            border: 1px solid rgba(0, 240, 255, 0.45);
             padding: 6px 12px;
             border-radius: 20px;
             font-size: 0.82rem;
-            letter-spacing: 0.5px;
         }
-        .stat-pill span { color: var(--text-muted); margin-right: 4px; }
-        .stat-pill strong { color: var(--accent); }
+        .stat-pill span { color: #94a3b8; margin-right: 4px; }
+        .stat-pill strong { color: #00f0ff; }
         .hud-controls { display: flex; gap: 8px; pointer-events: auto; }
-        button { touch-action: manipulation; cursor: pointer; }
         .icon-btn {
-            width: 42px;
-            height: 42px;
+            width: 44px; height: 44px;
             border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(10, 18, 38, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            background: rgba(10, 18, 38, 0.92);
             color: #fff;
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-size: 1.15rem;
+            cursor: pointer;
+            pointer-events: auto;
         }
         .evo-bar-wrapper {
             position: absolute;
-            top: 66px;
-            left: 50%;
+            top: 68px; left: 50%;
             transform: translateX(-50%);
             width: min(90%, 420px);
-            background: rgba(10, 18, 38, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(10, 18, 38, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 12px;
             padding: 8px 12px;
         }
@@ -142,56 +123,55 @@
             font-size: 0.75rem;
             font-weight: 700;
             margin-bottom: 5px;
-            color: var(--accent);
+            color: #00f0ff;
         }
-        #evo-next-name { color: var(--gold); }
+        #evo-next-name { color: #ffd700; }
         .evo-progress-bg {
-            width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.12);
+            width: 100%; height: 8px;
+            background: rgba(255, 255, 255, 0.14);
             border-radius: 6px;
             overflow: hidden;
         }
         #evo-progress-fill {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--gold));
-            transition: width 0.2s ease-out;
+            width: 0%; height: 100%;
+            background: linear-gradient(90deg, #00f0ff, #ff007f, #ffd700);
+            transition: width 0.2s;
         }
         .touch-hint {
             text-align: center;
-            font-size: 0.72rem;
+            font-size: 0.75rem;
             letter-spacing: 1px;
-            color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 6px;
+            color: rgba(255, 255, 255, 0.75);
+            margin-bottom: 8px;
         }
 
-        /* Overlay Screens */
         .overlay-screen {
             position: fixed;
-            inset: 0;
-            z-index: 20;
-            background: rgba(5, 8, 20, 0.72);
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 50;
+            background: rgba(5, 8, 20, 0.78);
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 16px;
+            pointer-events: auto;
         }
         .panel {
             width: min(100%, 430px);
-            background: var(--panel-bg);
-            border: 1px solid rgba(0, 240, 255, 0.4);
-            box-shadow: 0 0 35px rgba(0, 240, 255, 0.2);
+            background: rgba(13, 21, 45, 0.96);
+            border: 1px solid rgba(0, 240, 255, 0.45);
+            box-shadow: 0 0 35px rgba(0, 240, 255, 0.22);
             border-radius: 20px;
             padding: 24px 20px;
             text-align: center;
             display: flex;
             flex-direction: column;
             gap: 14px;
+            pointer-events: auto;
         }
         .game-title { font-size: 1.9rem; font-weight: 900; letter-spacing: 1.5px; line-height: 1.1; }
-        .game-title span { color: var(--accent); text-shadow: 0 0 14px var(--accent); }
-        .subtitle { font-size: 0.85rem; color: var(--text-muted); }
+        .game-title span { color: #00f0ff; text-shadow: 0 0 14px #00f0ff; }
+        .subtitle { font-size: 0.85rem; color: #94a3b8; }
         .currency-bar {
             display: flex;
             justify-content: space-around;
@@ -203,19 +183,19 @@
         }
         .mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .mode-btn {
-            padding: 10px 6px;
+            padding: 11px 6px;
             border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.22);
-            background: rgba(255, 255, 255, 0.06);
-            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
             font-size: 0.76rem;
             font-weight: 700;
+            cursor: pointer;
         }
         .mode-btn.active {
-            background: rgba(0, 240, 255, 0.22);
-            border-color: var(--accent);
-            color: #fff;
-            box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+            background: rgba(0, 240, 255, 0.25);
+            border-color: #00f0ff;
+            color: #ffffff;
         }
         .level-row {
             display: flex;
@@ -225,41 +205,42 @@
             font-size: 0.95rem;
         }
         .small-btn {
-            width: 38px;
-            height: 38px;
+            width: 40px; height: 40px;
             border-radius: 8px;
-            border: 1px solid var(--accent);
-            background: rgba(0, 240, 255, 0.15);
+            border: 1px solid #00f0ff;
+            background: rgba(0, 240, 255, 0.18);
             color: #fff;
             font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
         }
         .btn-primary, .btn-secondary, .btn-reward {
             width: 100%;
-            padding: 14px;
+            padding: 15px;
             border-radius: 12px;
             border: none;
             font-size: 1rem;
             font-weight: 800;
             letter-spacing: 1px;
+            cursor: pointer;
         }
         .btn-primary {
             background: linear-gradient(135deg, #00f0ff, #0077ff);
             color: #041024;
-            box-shadow: 0 6px 20px rgba(0, 240, 255, 0.35);
+            box-shadow: 0 6px 20px rgba(0, 240, 255, 0.4);
         }
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.14);
             color: #fff;
             border: 1px solid rgba(255, 255, 255, 0.25);
             font-size: 0.85rem;
-            padding: 11px;
+            padding: 12px;
         }
         .btn-reward {
             background: linear-gradient(135deg, #ffd700, #ff8c00);
             color: #1a0f00;
             font-size: 0.9rem;
         }
-        .btn-primary:active, .btn-secondary:active, .btn-reward:active, .icon-btn:active { transform: scale(0.96); }
         .btn-secondary:disabled { opacity: 0.45; }
         .summary-box {
             background: rgba(0, 0, 0, 0.45);
@@ -271,12 +252,7 @@
             font-size: 0.92rem;
         }
         .danger-text { color: #ff3b5c; }
-        .success-text { color: var(--success); }
-        @media (orientation: landscape) and (max-height: 500px) {
-            .panel { padding: 14px 18px; gap: 8px; }
-            .game-title { font-size: 1.4rem; }
-            .btn-primary, .btn-secondary, .btn-reward { padding: 9px; }
-        }
+        .success-text { color: #00ff88; }
     </style>
 </head>
 <body>
@@ -292,8 +268,8 @@
                 <div class="stat-pill" id="timer-pill" style="display:none;"><span>TIME</span> <strong id="hud-timer">60</strong></div>
             </div>
             <div class="hud-controls">
-                <button id="btn-mute" class="icon-btn" type="button">🔊</button>
-                <button id="btn-pause" class="icon-btn" type="button">⏸</button>
+                <button id="btn-mute" class="icon-btn" type="button" onclick="window.game && window.game.toggleMute()">🔊</button>
+                <button id="btn-pause" class="icon-btn" type="button" onclick="window.game && window.game.pauseGame()">⏸</button>
             </div>
         </div>
 
@@ -322,22 +298,22 @@
                 <div class="curr-item">🏆 <span id="menu-highscore">0</span></div>
             </div>
 
-            <button id="btn-daily-reward" class="btn-secondary" type="button">🎁 CLAIM DAILY REWARD (+100 COINS)</button>
+            <button id="btn-daily-reward" class="btn-secondary" type="button" onclick="window.game && window.game.handleDaily()">🎁 CLAIM DAILY REWARD (+100 COINS)</button>
 
             <div class="mode-selector">
-                <button class="mode-btn active" data-mode="classic" type="button">CLASSIC (500 LVLS)</button>
-                <button class="mode-btn" data-mode="endless" type="button">ENDLESS</button>
-                <button class="mode-btn" data-mode="time" type="button">TIME ATTACK</button>
-                <button class="mode-btn" data-mode="evolution" type="button">EVOLUTION RUSH</button>
+                <button class="mode-btn active" data-mode="classic" type="button" onclick="window.game && window.game.setMode('classic', this)">CLASSIC (500 LVLS)</button>
+                <button class="mode-btn" data-mode="endless" type="button" onclick="window.game && window.game.setMode('endless', this)">ENDLESS</button>
+                <button class="mode-btn" data-mode="time" type="button" onclick="window.game && window.game.setMode('time', this)">TIME ATTACK</button>
+                <button class="mode-btn" data-mode="evolution" type="button" onclick="window.game && window.game.setMode('evolution', this)">EVOLUTION RUSH</button>
             </div>
 
             <div id="level-select-row" class="level-row">
-                <button id="btn-lvl-prev" class="small-btn" type="button">◀</button>
+                <button id="btn-lvl-prev" class="small-btn" type="button" onclick="window.game && window.game.changeLevel(-1)">◀</button>
                 <span>LEVEL <strong id="selected-level-num">1</strong> / 500</span>
-                <button id="btn-lvl-next" class="small-btn" type="button">▶</button>
+                <button id="btn-lvl-next" class="small-btn" type="button" onclick="window.game && window.game.changeLevel(1)">▶</button>
             </div>
 
-            <button id="btn-play" class="btn-primary" type="button">PLAY NOW</button>
+            <button id="btn-play" class="btn-primary" type="button" onclick="window.game && window.game.startLevel(window.game.currentLevelNum)">PLAY NOW</button>
         </div>
     </div>
 
@@ -345,9 +321,9 @@
     <div id="pause-screen" class="overlay-screen hidden">
         <div class="panel">
             <h2>GAME PAUSED</h2>
-            <button id="btn-resume" class="btn-primary" type="button">RESUME</button>
-            <button id="btn-restart-pause" class="btn-secondary" type="button">RESTART LEVEL</button>
-            <button id="btn-home-pause" class="btn-secondary" type="button">MAIN MENU</button>
+            <button id="btn-resume" class="btn-primary" type="button" onclick="window.game && window.game.resumeGame()">RESUME</button>
+            <button id="btn-restart-pause" class="btn-secondary" type="button" onclick="window.game && window.game.startLevel(window.game.currentLevelNum)">RESTART LEVEL</button>
+            <button id="btn-home-pause" class="btn-secondary" type="button" onclick="window.game && window.game.goHome()">MAIN MENU</button>
         </div>
     </div>
 
@@ -361,9 +337,9 @@
                 <div>HIGH SCORE: <strong id="go-highscore">0</strong></div>
                 <div>FORM REACHED: <strong id="go-form">CUBE</strong></div>
             </div>
-            <button id="btn-revive" class="btn-reward" type="button">🎬 REVIVE (WATCH AD / BONUS)</button>
-            <button id="btn-retry" class="btn-primary" type="button">TRY AGAIN</button>
-            <button id="btn-home-go" class="btn-secondary" type="button">MAIN MENU</button>
+            <button id="btn-revive" class="btn-reward" type="button" onclick="window.game && window.game.revivePlayer()">🎬 REVIVE (WATCH AD / BONUS)</button>
+            <button id="btn-retry" class="btn-primary" type="button" onclick="window.game && window.game.retryLevel()">TRY AGAIN</button>
+            <button id="btn-home-go" class="btn-secondary" type="button" onclick="window.game && window.game.goHome()">MAIN MENU</button>
         </div>
     </div>
 
@@ -376,24 +352,21 @@
                 <div>COINS EARNED: <strong id="vic-coins">+50</strong></div>
                 <div>FINAL FORM: <strong id="vic-form">SPHERE</strong></div>
             </div>
-            <button id="btn-double-coins" class="btn-reward" type="button">🎬 2X COINS BONUS</button>
-            <button id="btn-next-level" class="btn-primary" type="button">NEXT LEVEL ▶</button>
-            <button id="btn-home-vic" class="btn-secondary" type="button">MAIN MENU</button>
+            <button id="btn-double-coins" class="btn-reward" type="button" onclick="window.game && window.game.doubleCoins(this)">🎬 2X COINS BONUS</button>
+            <button id="btn-next-level" class="btn-primary" type="button" onclick="window.game && window.game.nextLevel()">NEXT LEVEL ▶</button>
+            <button id="btn-home-vic" class="btn-secondary" type="button" onclick="window.game && window.game.goHome()">MAIN MENU</button>
         </div>
     </div>
 
     <script>
-    // ==========================================
-    // 1. EVOLUTION FORMS & 500 LEVELS
-    // ==========================================
     const EVOLUTION_FORMS = [
-        { id: 0, name: "1. CUBE", shortName: "CUBE", requiredGems: 0, color: "#00f0ff", glow: "#007799", scale: 1.0, speedBonus: 1.0, jumpBonus: 1.0 },
-        { id: 1, name: "2. SPHERE", shortName: "SPHERE", requiredGems: 5, color: "#00ff88", glow: "#008844", scale: 1.08, speedBonus: 1.06, jumpBonus: 1.05 },
-        { id: 2, name: "3. PYRAMID", shortName: "PYRAMID", requiredGems: 12, color: "#ffd700", glow: "#997700", scale: 1.14, speedBonus: 1.12, jumpBonus: 1.1 },
-        { id: 3, name: "4. DIAMOND", shortName: "DIAMOND", requiredGems: 20, color: "#ff007f", glow: "#880044", scale: 1.2, speedBonus: 1.18, jumpBonus: 1.15 },
-        { id: 4, name: "5. HEXAGON", shortName: "HEXAGON", requiredGems: 30, color: "#a855f7", glow: "#581c87", scale: 1.25, speedBonus: 1.22, jumpBonus: 1.18 },
-        { id: 5, name: "6. CRYSTAL", shortName: "CRYSTAL", requiredGems: 42, color: "#ff6b00", glow: "#993d00", scale: 1.3, speedBonus: 1.28, jumpBonus: 1.22 },
-        { id: 6, name: "7. ULTIMATE ENERGY", shortName: "ULTIMATE", requiredGems: 55, color: "#ffffff", glow: "#00f0ff", scale: 1.38, speedBonus: 1.35, jumpBonus: 1.28 }
+        { id: 0, name: "1. CUBE", shortName: "CUBE", requiredGems: 0, color: "#00f0ff", scale: 1.0, speedBonus: 1.0, jumpBonus: 1.0 },
+        { id: 1, name: "2. SPHERE", shortName: "SPHERE", requiredGems: 5, color: "#00ff88", scale: 1.08, speedBonus: 1.06, jumpBonus: 1.05 },
+        { id: 2, name: "3. PYRAMID", shortName: "PYRAMID", requiredGems: 12, color: "#ffd700", scale: 1.14, speedBonus: 1.12, jumpBonus: 1.1 },
+        { id: 3, name: "4. DIAMOND", shortName: "DIAMOND", requiredGems: 20, color: "#ff007f", scale: 1.2, speedBonus: 1.18, jumpBonus: 1.15 },
+        { id: 4, name: "5. HEXAGON", shortName: "HEXAGON", requiredGems: 30, color: "#a855f7", scale: 1.25, speedBonus: 1.22, jumpBonus: 1.18 },
+        { id: 5, name: "6. CRYSTAL", shortName: "CRYSTAL", requiredGems: 42, color: "#ff6b00", scale: 1.3, speedBonus: 1.28, jumpBonus: 1.22 },
+        { id: 6, name: "7. ULTIMATE ENERGY", shortName: "ULTIMATE", requiredGems: 55, color: "#ffffff", scale: 1.38, speedBonus: 1.35, jumpBonus: 1.28 }
     ];
 
     const ENVIRONMENT_THEMES = [
@@ -434,9 +407,6 @@
         return levels;
     })();
 
-    // ==========================================
-    // 2. MULTI-PORTAL SDK BRIDGE
-    // ==========================================
     const PortalBridge = {
         async init() {
             if (window.CrazyGames && window.CrazyGames.SDK) {
@@ -467,5 +437,10 @@
         }
     };
 
-    // ==========================================
-    // 3. P
+    class SoundEngine {
+        constructor() { this.ctx = null; this.muted = false; this.bgmInterval = null; }
+        init() {
+            try {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx
