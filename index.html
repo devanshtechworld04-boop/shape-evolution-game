@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Shape Evolution 3D</title>
+    <title>Neon Shape Evolution 3D</title>
+    
+    <!-- [OPTION A] CRAZYGAMES SDK v3 (Commented out for GameMonetize): -->
+    <!-- <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script> -->
 
-    <!-- [OPTION A] CRAZYGAMES SDK v3: Uncomment when uploading to CrazyGames -->
-    <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script> -->
-
-    <!-- [OPTION B] GAMEDISTRIBUTION SDK: Uncomment & replace YOUR_GD_GAME_ID -->
+    <!-- [OPTION B] GAMEDISTRIBUTION SDK (Commented out for GameMonetize): -->
     <!--
     <script>
         window["GD_OPTIONS"] = {
             "gameId": "YOUR_GD_GAME_ID",
             "onEvent": function(event) {
-                if (event.name === "SDK_GAME_PAUSE" && window.game) { window.game.sound.muted = true; window.game.sound.stopBGM(); }
-                else if (event.name === "SDK_GAME_START" && window.game) { window.game.sound.muted = false; if (window.game.state === "PLAYING") window.game.sound.startBGM(); }
+                if (event.name === "SDK_GAME_PAUSE") { if(window.game) window.game.pause(); }
+                else if (event.name === "SDK_GAME_START") { if(window.game) window.game.resume(); }
             }
         };
         (function(d, s, id) {
@@ -28,14 +28,15 @@
     </script>
     -->
 
-    <!-- [OPTION C] GAMEMONETIZE SDK: Uncomment & replace YOUR_GM_GAME_ID -->
-    <!--
+    <!-- [OPTION C] GAMEMONETIZE SDK (ACTIVE WITH YOUR GAME ID): -->
     <script type="text/javascript">
         window.SDK_OPTIONS = {
-            gameId: "YOUR_GM_GAME_ID",
+            gameId: "5cx5i3oip1bgcj630e0pyrma9fvn46nl",
             onEvent: function (a) {
-                if (a.name === "SDK_GAME_PAUSE" && window.game) { window.game.sound.muted = true; window.game.sound.stopBGM(); }
-                else if (a.name === "SDK_GAME_START" && window.game) { window.game.sound.muted = false; if (window.game.state === "PLAYING") window.game.sound.startBGM(); }
+                switch (a.name) {
+                    case "SDK_GAME_PAUSE": if(window.game) window.game.pause(); break;
+                    case "SDK_GAME_START": if(window.game) window.game.resume(); break;
+                }
             }
         };
         (function (a, b, c) {
@@ -43,1173 +44,408 @@
             a.getElementById(c) || (a = a.createElement(b), a.id = c, a.src = "https://api.gamemonetize.com/sdk.js", d.parentNode.insertBefore(a, d))
         })(document, "script", "gamemonetize-sdk");
     </script>
-    -->
 
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
-        }
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #070b19;
-            color: #ffffff;
-        }
-        #game-canvas {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            display: block;
-            z-index: 1;
-            touch-action: none;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #050510; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; touch-action: none; }
+        #game-canvas { display: block; width: 100%; height: 100%; }
+        
+        /* HUD & Overlays */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; pointer-events: auto; }
+        .stat-pill { background: rgba(15, 20, 40, 0.75); border: 1px solid rgba(0, 240, 255, 0.4); backdrop-filter: blur(8px); padding: 8px 18px; border-radius: 30px; color: #fff; font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px; box-shadow: 0 0 15px rgba(0, 240, 255, 0.2); }
+        .stat-pill span.accent { color: #00f0ff; }
+        .stat-pill span.gold { color: #ffd700; }
+        
+        .icon-btn { background: rgba(15, 20, 40, 0.8); border: 1px solid rgba(255, 255, 255, 0.25); color: #fff; width: 42px; height: 42px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .icon-btn:hover { background: rgba(0, 240, 255, 0.3); border-color: #00f0ff; transform: scale(1.05); }
+
+        /* Evolution Progress Bar */
+        .evo-container { position: absolute; top: 72px; left: 50%; transform: translateX(-50%); width: min(360px, 85%); text-align: center; }
+        .evo-label { color: #fff; font-size: 13px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; text-shadow: 0 0 10px #ff00aa; }
+        .evo-bar-bg { width: 100%; height: 10px; background: rgba(255,255,255,0.12); border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); }
+        .evo-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #00f0ff, #ff00aa, #ffd700); transition: width 0.2s ease-out; box-shadow: 0 0 12px #00f0ff; }
+
+        /* Screens (Menu, Level Complete, Game Over) */
+        .modal-screen { position: absolute; inset: 0; background: rgba(5, 8, 22, 0.82); backdrop-filter: blur(10px); display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; z-index: 10; text-align: center; padding: 20px; transition: opacity 0.3s; }
         .hidden { display: none !important; }
+        
+        h1.game-title { font-size: clamp(32px, 6.5vw, 60px); font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 2px; line-height: 1.1; margin-bottom: 10px; text-shadow: 0 0 25px rgba(0, 240, 255, 0.8), 0 0 50px rgba(255, 0, 170, 0.5); }
+        h1.game-title span { color: #00f0ff; }
+        p.subtitle { color: #a0b0d0; font-size: 16px; max-width: 440px; margin-bottom: 28px; line-height: 1.5; }
+        
+        .btn-primary { background: linear-gradient(135deg, #00f0ff, #0077ff); color: #050510; border: none; padding: 16px 44px; font-size: 20px; font-weight: 900; border-radius: 50px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 8px 25px rgba(0, 240, 255, 0.45); transition: 0.2s; margin: 8px; }
+        .btn-primary:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 12px 32px rgba(0, 240, 255, 0.7); }
+        
+        .btn-reward { background: linear-gradient(135deg, #ffd700, #ff8800); color: #111; border: none; padding: 14px 32px; font-size: 17px; font-weight: 800; border-radius: 50px; cursor: pointer; box-shadow: 0 6px 20px rgba(255, 170, 0, 0.4); transition: 0.2s; margin: 8px; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-reward:hover { transform: scale(1.04); }
+        
+        .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 12px 28px; font-size: 16px; font-weight: 700; border-radius: 50px; cursor: pointer; margin: 8px; transition: 0.2s; }
+        .btn-secondary:hover { background: rgba(255,255,255,0.2); }
 
-        #hud {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            z-index: 10;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 14px;
-        }
-        .hud-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 8px;
-        }
-        .hud-stats { display: flex; flex-wrap: wrap; gap: 8px; }
-        .stat-pill {
-            background: rgba(10, 18, 38, 0.88);
-            border: 1px solid rgba(0, 240, 255, 0.45);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.82rem;
-        }
-        .stat-pill span { color: #94a3b8; margin-right: 4px; }
-        .stat-pill strong { color: #00f0ff; }
-        .hud-controls { display: flex; gap: 8px; pointer-events: auto; }
-        .icon-btn {
-            width: 44px; height: 44px;
-            border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.35);
-            background: rgba(10, 18, 38, 0.92);
-            color: #fff;
-            font-size: 1.15rem;
-            cursor: pointer;
-            pointer-events: auto;
-        }
-        .evo-bar-wrapper {
-            position: absolute;
-            top: 68px; left: 50%;
-            transform: translateX(-50%);
-            width: min(90%, 420px);
-            background: rgba(10, 18, 38, 0.88);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 8px 12px;
-        }
-        .evo-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-            color: #00f0ff;
-        }
-        #evo-next-name { color: #ffd700; }
-        .evo-progress-bg {
-            width: 100%; height: 8px;
-            background: rgba(255, 255, 255, 0.14);
-            border-radius: 6px;
-            overflow: hidden;
-        }
-        #evo-progress-fill {
-            width: 0%; height: 100%;
-            background: linear-gradient(90deg, #00f0ff, #ff007f, #ffd700);
-            transition: width 0.2s;
-        }
-        .touch-hint {
-            text-align: center;
-            font-size: 0.75rem;
-            letter-spacing: 1px;
-            color: rgba(255, 255, 255, 0.75);
-            margin-bottom: 8px;
-        }
-
-        .overlay-screen {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            z-index: 50;
-            background: rgba(5, 8, 20, 0.78);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            pointer-events: auto;
-        }
-        .panel {
-            width: min(100%, 430px);
-            background: rgba(13, 21, 45, 0.96);
-            border: 1px solid rgba(0, 240, 255, 0.45);
-            box-shadow: 0 0 35px rgba(0, 240, 255, 0.22);
-            border-radius: 20px;
-            padding: 24px 20px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            pointer-events: auto;
-        }
-        .game-title { font-size: 1.9rem; font-weight: 900; letter-spacing: 1.5px; line-height: 1.1; }
-        .game-title span { color: #00f0ff; text-shadow: 0 0 14px #00f0ff; }
-        .subtitle { font-size: 0.85rem; color: #94a3b8; }
-        .currency-bar {
-            display: flex;
-            justify-content: space-around;
-            background: rgba(0, 0, 0, 0.45);
-            padding: 10px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 0.95rem;
-        }
-        .mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .mode-btn {
-            padding: 11px 6px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            background: rgba(255, 255, 255, 0.08);
-            color: #cbd5e1;
-            font-size: 0.76rem;
-            font-weight: 700;
-            cursor: pointer;
-        }
-        .mode-btn.active {
-            background: rgba(0, 240, 255, 0.25);
-            border-color: #00f0ff;
-            color: #ffffff;
-        }
-        .level-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            font-size: 0.95rem;
-        }
-        .small-btn {
-            width: 40px; height: 40px;
-            border-radius: 8px;
-            border: 1px solid #00f0ff;
-            background: rgba(0, 240, 255, 0.18);
-            color: #fff;
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-        }
-        .btn-primary, .btn-secondary, .btn-reward {
-            width: 100%;
-            padding: 15px;
-            border-radius: 12px;
-            border: none;
-            font-size: 1rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-            cursor: pointer;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #00f0ff, #0077ff);
-            color: #041024;
-            box-shadow: 0 6px 20px rgba(0, 240, 255, 0.4);
-        }
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.14);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            font-size: 0.85rem;
-            padding: 12px;
-        }
-        .btn-reward {
-            background: linear-gradient(135deg, #ffd700, #ff8c00);
-            color: #1a0f00;
-            font-size: 0.9rem;
-        }
-        .btn-secondary:disabled { opacity: 0.45; }
-        .summary-box {
-            background: rgba(0, 0, 0, 0.45);
-            border-radius: 12px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            font-size: 0.92rem;
-        }
-        .danger-text { color: #ff3b5c; }
-        .success-text { color: #00ff88; }
+        .level-badge { background: rgba(255, 0, 170, 0.2); border: 1px solid #ff00aa; color: #ff66cc; padding: 6px 16px; border-radius: 20px; font-weight: 800; font-size: 14px; margin-bottom: 16px; letter-spacing: 1px; }
+        .controls-hint { position: absolute; bottom: 20px; width: 100%; text-align: center; color: rgba(255,255,255,0.5); font-size: 13px; pointer-events: none; }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+
     <canvas id="game-canvas"></canvas>
 
-    <!-- HUD -->
-    <div id="hud" class="hidden">
-        <div class="hud-top">
-            <div class="hud-stats">
-                <div class="stat-pill"><span>LVL</span> <strong id="hud-level">1</strong></div>
-                <div class="stat-pill"><span>SCORE</span> <strong id="hud-score">0</strong></div>
-                <div class="stat-pill"><span>GEMS</span> <strong id="hud-gems">0</strong></div>
-                <div class="stat-pill" id="timer-pill" style="display:none;"><span>TIME</span> <strong id="hud-timer">60</strong></div>
-            </div>
-            <div class="hud-controls">
-                <button id="btn-mute" class="icon-btn" type="button" onclick="window.game && window.game.toggleMute()">🔊</button>
-                <button id="btn-pause" class="icon-btn" type="button" onclick="window.game && window.game.pauseGame()">⏸</button>
+    <div id="ui-layer">
+        <div class="top-bar">
+            <div class="stat-pill">LEVEL <span class="accent" id="hud-level">1</span> / 500</div>
+            <div class="stat-pill">SCORE <span class="accent" id="hud-score">0</span></div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <div class="stat-pill">💎 <span class="gold" id="hud-coins">0</span></div>
+                <button class="icon-btn" id="btn-mute" title="Toggle Sound">🔊</button>
+                <button class="icon-btn" id="btn-pause" title="Pause">⏸</button>
             </div>
         </div>
 
-        <div class="evo-bar-wrapper">
-            <div class="evo-label">
-                <span id="evo-stage-name">1. CUBE</span>
-                <span id="evo-next-name">NEXT: SPHERE</span>
-            </div>
-            <div class="evo-progress-bg">
-                <div id="evo-progress-fill"></div>
-            </div>
+        <div class="evo-container" id="evo-hud">
+            <div class="evo-label" id="evo-stage-name">STAGE 1: BASIC CUBE</div>
+            <div class="evo-bar-bg"><div class="evo-bar-fill" id="evo-bar-fill"></div></div>
         </div>
 
-        <div class="touch-hint">DRAG LEFT / RIGHT TO MOVE • TAP / SPACE TO JUMP</div>
+        <div class="controls-hint" id="controls-hint">DRAG / A-D / ARROWS TO STEER • TAP / SPACE TO JUMP</div>
     </div>
 
-    <!-- Main Menu -->
-    <div id="menu-screen" class="overlay-screen">
-        <div class="panel">
-            <h1 class="game-title">SHAPE EVOLUTION <span>3D</span></h1>
-            <p class="subtitle">Collect Energy Gems • Evolve Your Form • 500 Levels</p>
-
-            <div class="currency-bar">
-                <div class="curr-item">💎 <span id="menu-gems">0</span></div>
-                <div class="curr-item">🪙 <span id="menu-coins">0</span></div>
-                <div class="curr-item">🏆 <span id="menu-highscore">0</span></div>
-            </div>
-
-            <button id="btn-daily-reward" class="btn-secondary" type="button" onclick="window.game && window.game.handleDaily()">🎁 CLAIM DAILY REWARD (+100 COINS)</button>
-
-            <div class="mode-selector">
-                <button class="mode-btn active" data-mode="classic" type="button" onclick="window.game && window.game.setMode('classic', this)">CLASSIC (500 LVLS)</button>
-                <button class="mode-btn" data-mode="endless" type="button" onclick="window.game && window.game.setMode('endless', this)">ENDLESS</button>
-                <button class="mode-btn" data-mode="time" type="button" onclick="window.game && window.game.setMode('time', this)">TIME ATTACK</button>
-                <button class="mode-btn" data-mode="evolution" type="button" onclick="window.game && window.game.setMode('evolution', this)">EVOLUTION RUSH</button>
-            </div>
-
-            <div id="level-select-row" class="level-row">
-                <button id="btn-lvl-prev" class="small-btn" type="button" onclick="window.game && window.game.changeLevel(-1)">◀</button>
-                <span>LEVEL <strong id="selected-level-num">1</strong> / 500</span>
-                <button id="btn-lvl-next" class="small-btn" type="button" onclick="window.game && window.game.changeLevel(1)">▶</button>
-            </div>
-
-            <button id="btn-play" class="btn-primary" type="button" onclick="window.game && window.game.startLevel(window.game.currentLevelNum)">PLAY NOW</button>
-        </div>
+    <!-- MAIN MENU -->
+    <div class="modal-screen" id="screen-menu">
+        <div class="level-badge">500 HANDCRAFTED LEVELS</div>
+        <h1 class="game-title">NEON SHAPE<br>EVOLUTION <span>3D</span></h1>
+        <p class="subtitle">Collect glowing energy gems to evolve your geometric form, dodge lasers, and reach the portal!</p>
+        <button class="btn-primary" id="btn-play">PLAY LEVEL <span id="menu-lvl-num">1</span></button>
+        <div style="margin-top:14px; color:#ffd700; font-weight:700;">HIGH SCORE: <span id="menu-highscore">0</span></div>
     </div>
 
-    <!-- Pause -->
-    <div id="pause-screen" class="overlay-screen hidden">
-        <div class="panel">
-            <h2>GAME PAUSED</h2>
-            <button id="btn-resume" class="btn-primary" type="button" onclick="window.game && window.game.resumeGame()">RESUME</button>
-            <button id="btn-restart-pause" class="btn-secondary" type="button" onclick="window.game && window.game.startLevel(window.game.currentLevelNum)">RESTART LEVEL</button>
-            <button id="btn-home-pause" class="btn-secondary" type="button" onclick="window.game && window.game.goHome()">MAIN MENU</button>
-        </div>
+    <!-- LEVEL COMPLETE -->
+    <div class="modal-screen hidden" id="screen-win">
+        <div class="level-badge" style="border-color:#00ff88; color:#00ff88; background:rgba(0,255,136,0.15);">EVOLUTION COMPLETE!</div>
+        <h1 class="game-title">LEVEL <span id="win-lvl-num">1</span> CLEARED</h1>
+        <p class="subtitle">Gems Earned: <strong style="color:#ffd700;" id="win-coins">+50</strong></p>
+        <button class="btn-reward" id="btn-double-coins">🎬 CLAIM 2X GEMS (+100)</button>
+        <button class="btn-primary" id="btn-next-level">NEXT LEVEL ➔</button>
     </div>
 
-    <!-- Game Over -->
-    <div id="gameover-screen" class="overlay-screen hidden">
-        <div class="panel">
-            <h2 class="danger-text">SHATTERED!</h2>
-            <p id="gameover-reason">You collided with a hazard.</p>
-            <div class="summary-box">
-                <div>SCORE: <strong id="go-score">0</strong></div>
-                <div>HIGH SCORE: <strong id="go-highscore">0</strong></div>
-                <div>FORM REACHED: <strong id="go-form">CUBE</strong></div>
-            </div>
-            <button id="btn-revive" class="btn-reward" type="button" onclick="window.game && window.game.revivePlayer()">🎬 REVIVE (WATCH AD / BONUS)</button>
-            <button id="btn-retry" class="btn-primary" type="button" onclick="window.game && window.game.retryLevel()">TRY AGAIN</button>
-            <button id="btn-home-go" class="btn-secondary" type="button" onclick="window.game && window.game.goHome()">MAIN MENU</button>
-        </div>
+    <!-- GAME OVER -->
+    <div class="modal-screen hidden" id="screen-gameover">
+        <div class="level-badge" style="border-color:#ff3355; color:#ff5577; background:rgba(255,51,85,0.15);">SHATTERED!</div>
+        <h1 class="game-title">TRY <span>AGAIN</span></h1>
+        <p class="subtitle">Avoid red laser barriers and spinning blades while evolving your shape.</p>
+        <button class="btn-reward" id="btn-revive">🎬 REVIVE & CONTINUE</button>
+        <button class="btn-primary" id="btn-retry">RESTART LEVEL</button>
+        <button class="btn-secondary" id="btn-home">MAIN MENU</button>
     </div>
 
-    <!-- Victory -->
-    <div id="victory-screen" class="overlay-screen hidden">
-        <div class="panel">
-            <h2 class="success-text">LEVEL COMPLETE!</h2>
-            <div class="summary-box">
-                <div>SCORE: <strong id="vic-score">0</strong></div>
-                <div>COINS EARNED: <strong id="vic-coins">+50</strong></div>
-                <div>FINAL FORM: <strong id="vic-form">SPHERE</strong></div>
-            </div>
-            <button id="btn-double-coins" class="btn-reward" type="button" onclick="window.game && window.game.doubleCoins(this)">🎬 2X COINS BONUS</button>
-            <button id="btn-next-level" class="btn-primary" type="button" onclick="window.game && window.game.nextLevel()">NEXT LEVEL ▶</button>
-            <button id="btn-home-vic" class="btn-secondary" type="button" onclick="window.game && window.game.goHome()">MAIN MENU</button>
-        </div>
+    <!-- PAUSE SCREEN -->
+    <div class="modal-screen hidden" id="screen-pause">
+        <h1 class="game-title">GAME <span>PAUSED</span></h1>
+        <button class="btn-primary" id="btn-resume">RESUME</button>
+        <button class="btn-secondary" id="btn-pause-home">QUIT TO MENU</button>
     </div>
 
-    <script>
-    const EVOLUTION_FORMS = [
-        { id: 0, name: "1. CUBE", shortName: "CUBE", requiredGems: 0, color: "#00f0ff", scale: 1.0, speedBonus: 1.0, jumpBonus: 1.0 },
-        { id: 1, name: "2. SPHERE", shortName: "SPHERE", requiredGems: 5, color: "#00ff88", scale: 1.08, speedBonus: 1.06, jumpBonus: 1.05 },
-        { id: 2, name: "3. PYRAMID", shortName: "PYRAMID", requiredGems: 12, color: "#ffd700", scale: 1.14, speedBonus: 1.12, jumpBonus: 1.1 },
-        { id: 3, name: "4. DIAMOND", shortName: "DIAMOND", requiredGems: 20, color: "#ff007f", scale: 1.2, speedBonus: 1.18, jumpBonus: 1.15 },
-        { id: 4, name: "5. HEXAGON", shortName: "HEXAGON", requiredGems: 30, color: "#a855f7", scale: 1.25, speedBonus: 1.22, jumpBonus: 1.18 },
-        { id: 5, name: "6. CRYSTAL", shortName: "CRYSTAL", requiredGems: 42, color: "#ff6b00", scale: 1.3, speedBonus: 1.28, jumpBonus: 1.22 },
-        { id: 6, name: "7. ULTIMATE ENERGY", shortName: "ULTIMATE", requiredGems: 55, color: "#ffffff", scale: 1.38, speedBonus: 1.35, jumpBonus: 1.28 }
-    ];
-
-    const ENVIRONMENT_THEMES = [
-        { skyTop: "#050914", skyBot: "#0d1b3a", road: "#0f172a", grid: "#00f0ff" },
-        { skyTop: "#14051d", skyBot: "#2d0b42", road: "#1e092c", grid: "#ff007f" },
-        { skyTop: "#041712", skyBot: "#0a362a", road: "#07241c", grid: "#00ff88" },
-        { skyTop: "#1c1104", skyBot: "#3d2508", road: "#291805", grid: "#ffaa00" },
-        { skyTop: "#090b24", skyBot: "#181d54", road: "#101338", grid: "#8b5cf6" },
-        { skyTop: "#1f0409", skyBot: "#450a14", road: "#2b060d", grid: "#ff3b5c" },
-        { skyTop: "#041424", skyBot: "#0b2e52", road: "#071f38", grid: "#38bdf8" },
-        { skyTop: "#151904", skyBot: "#2f3809", road: "#1f2406", grid: "#bef264" },
-        { skyTop: "#1a081e", skyBot: "#3b1245", road: "#260b2c", grid: "#f472b6" },
-        { skyTop: "#08080c", skyBot: "#1e1e2e", road: "#12121c", grid: "#ffffff" }
-    ];
-
-    const TOTAL_LEVELS = 500;
-    const LEVELS_DATA = (() => {
-        const levels = [];
-        const pool = ["moving_block", "laser_gate", "spinning_blade", "falling_platform", "energy_barrier", "moving_wall"];
-        for (let i = 1; i <= TOTAL_LEVELS; i++) {
-            const themeIndex = Math.floor((i - 1) / 10) % ENVIRONMENT_THEMES.length;
-            const ratio = (i - 1) / (TOTAL_LEVELS - 1);
-            const length = Math.floor(240 + i * 3.5);
-            const baseSpeed = +(18 + ratio * 18).toFixed(2);
-            const obstacleSpacing = Math.max(12, +(24 - ratio * 12).toFixed(2));
-            const availableObstacles = pool.slice(0, Math.min(2 + Math.floor(i / 5), pool.length));
-            levels.push({
-                levelNumber: i,
-                length,
-                baseSpeed,
-                obstacleSpacing,
-                theme: ENVIRONMENT_THEMES[themeIndex],
-                coinReward: 40 + i * 5,
-                timeLimit: Math.max(45, Math.floor(length / baseSpeed) + 16),
-                availableObstacles
-            });
-        }
-        return levels;
-    })();
-
-    const PortalBridge = {
-        async init() {
-            if (window.CrazyGames && window.CrazyGames.SDK) {
-                try { await window.CrazyGames.SDK.init(); } catch (e) {}
-            }
-        },
-        gameplayStart() { try { if (window.CrazyGames?.SDK?.game) window.CrazyGames.SDK.game.gameplayStart(); } catch (e) {} },
-        gameplayStop() { try { if (window.CrazyGames?.SDK?.game) window.CrazyGames.SDK.game.gameplayStop(); } catch (e) {} },
-        showInterstitial(cb) {
-            this.gameplayStop();
-            if (window.CrazyGames?.SDK?.ad) {
-                window.CrazyGames.SDK.ad.requestAd("midgame", { adFinished: () => cb && cb(), adError: () => cb && cb() });
-            } else if (typeof window.gdsdk !== "undefined" && window.gdsdk.showAd) {
-                window.gdsdk.showAd().then(() => cb && cb()).catch(() => cb && cb());
-            } else if (typeof window.sdk !== "undefined" && window.sdk.showBanner) {
-                window.sdk.showBanner(); if (cb) cb();
-            } else { if (cb) cb(); }
-        },
-        showRewarded(onReward, onCancel) {
-            this.gameplayStop();
-            if (window.CrazyGames?.SDK?.ad) {
-                window.CrazyGames.SDK.ad.requestAd("rewarded", { adFinished: () => onReward && onReward(), adError: () => onCancel && onCancel() });
-            } else if (typeof window.gdsdk !== "undefined" && window.gdsdk.showAd) {
-                window.gdsdk.showAd("rewarded").then(() => onReward && onReward()).catch(() => onCancel && onCancel());
-            } else if (typeof window.sdk !== "undefined" && window.sdk.showBanner) {
-                window.sdk.showBanner(); if (onReward) onReward();
-            } else { if (onReward) onReward(); }
-        }
-    };
-
-    class SoundEngine {
-        constructor() { this.ctx = null; this.muted = false; this.bgmInterval = null; }
-        init() {
-            try {
-                if (!this.ctx) {
-                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    if (AudioCtx) this.ctx = new AudioCtx();
-                }
-                if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
-            } catch (e) {}
-        }
-        playTone(freq, type, duration, vol = 0.14, slideTo = null) {
-            if (this.muted || !this.ctx) return;
-            try {
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = type;
-                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-                if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + duration);
-                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + duration);
-            } catch (e) {}
-        }
-        playGem() { this.playTone(680, "sine", 0.14, 0.16, 1180); }
-        playCoin() { this.playTone(920, "triangle", 0.16, 0.16, 1380); }
-        playJump() { this.playTone(220, "sine", 0.22, 0.18, 520); }
-        playCrash() { this.playTone(140, "sawtooth", 0.4, 0.25, 42); }
-        playEvolve() { [440, 554, 659, 880].forEach((n, i) => setTimeout(() => this.playTone(n, "triangle", 0.24, 0.18), i * 65)); }
-        playVictory() { [523, 659, 784, 1046].forEach((n, i) => setTimeout(() => this.playTone(n, "sine", 0.3, 0.2), i * 90)); }
-        startBGM() {
-            this.stopBGM();
-            const notes = [130.81, 164.81, 196.00, 164.81, 146.83, 174.61, 220.00, 196.00];
-            let step = 0;
-            this.bgmInterval = setInterval(() => {
-                if (!this.muted && this.ctx && this.ctx.state === "running") {
-                    this.playTone(notes[step % notes.length], "sine", 0.26, 0.04);
-                    step++;
-                }
-            }, 320);
-        }
-        stopBGM() { if (this.bgmInterval) { clearInterval(this.bgmInterval); this.bgmInterval = null; } }
+<script>
+/**
+ * ============================================================================
+ * 1. UNIVERSAL WEB PORTAL SDK BRIDGE (CrazyGames / GameDistribution / GameMonetize)
+ * ============================================================================
+ */
+class PortalBridge {
+    constructor() {
+        this.isAdPlaying = false;
+        this.init();
     }
 
-    const SaveManager = {
-        KEY: "shape_evolution_3d_save_v1",
-        data: { unlockedLevel: 1, selectedLevel: 1, highScore: 0, totalGems: 0, totalCoins: 0, lastDailyClaim: "", muted: false },
-        load() { try { const r = localStorage.getItem(this.KEY); if (r) Object.assign(this.data, JSON.parse(r)); } catch (e) {} },
-        save() { try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); } catch (e) {} },
-        canClaimDaily() { return this.data.lastDailyClaim !== new Date().toISOString().slice(0, 10); },
-        claimDaily() {
-            if (!this.canClaimDaily()) return false;
-            this.data.lastDailyClaim = new Date().toISOString().slice(0, 10);
-            this.data.totalCoins += 100;
-            this.save();
-            return true;
-        }
-    };
-
-    class ShapeEvolutionGame {
-        constructor() {
-            SaveManager.load();
-            PortalBridge.init();
-            this.sound = new SoundEngine();
-            this.sound.muted = SaveManager.data.muted;
-
-            this.canvas = document.getElementById("game-canvas");
-            this.ctx = this.canvas.getContext("2d");
-
-            this.state = "MENU";
-            this.mode = "classic";
-            this.currentLevelNum = SaveManager.data.selectedLevel || 1;
-            this.levelConfig = LEVELS_DATA[0];
-
-            this.score = 0;
-            this.runGems = 0;
-            this.runCoins = 0;
-            this.currentFormIdx = 0;
-            this.timeLeft = 60;
-            this.invulnerableTimer = 0;
-
-            this.trackWidth = 8.4;
-            this.playerX = 0;
-            this.targetX = 0;
-            this.playerY = 0;
-            this.playerZ = 0;
-            this.velocityY = 0;
-            this.isGrounded = true;
-            this.spinAngle = 0;
-
-            this.obstacles = [];
-            this.collectibles = [];
-            this.particles = [];
-            this.nextSpawnZ = 30;
-
-            this.resize();
-            this.bindInputs();
-            this.updateMenuUI();
-
-            this.lastTime = performance.now();
-            this.loop = this.loop.bind(this);
-            requestAnimationFrame(this.loop);
-        }
-
-        resize() {
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            this.width = window.innerWidth;
-            this.height = window.innerHeight;
-            this.canvas.width = this.width * dpr;
-            this.canvas.height = this.height * dpr;
-            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        }
-
-        project(wx, wy, wz) {
-            const camY = 4.6;
-            const camZ = -7.5;
-            const dz = wz - camZ;
-            if (dz <= 0.2) return null;
-            const fov = Math.min(this.width, this.height) * 0.92;
-            const scale = fov / dz;
-            const sx = this.width * 0.5 + (wx - this.playerX * 0.35) * scale;
-            const sy = this.height * 0.44 - (wy - camY) * scale;
-            return { x: sx, y: sy, scale, dz };
-        }
-
-        setMode(mode, btnEl) {
-            this.mode = mode;
-            document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
-            if (btnEl) btnEl.classList.add("active");
-            document.getElementById("level-select-row").style.display =
-                (mode === "classic" || mode === "time") ? "flex" : "none";
-        }
-
-        changeLevel(delta) {
-            const next = this.currentLevelNum + delta;
-            if (next >= 1 && next <= SaveManager.data.unlockedLevel) {
-                this.currentLevelNum = next;
-                document.getElementById("selected-level-num").textContent = this.currentLevelNum;
-            }
-        }
-
-        handleDaily() {
-            if (SaveManager.claimDaily()) {
-                this.sound.init();
-                this.sound.playCoin();
-                this.updateMenuUI();
-            }
-        }
-
-        toggleMute() {
-            this.sound.muted = !this.sound.muted;
-            SaveManager.data.muted = this.sound.muted;
-            SaveManager.save();
-            document.getElementById("btn-mute").textContent = this.sound.muted ? "🔇" : "🔊";
-        }
-
-        pauseGame() {
-            if (this.state === "PLAYING") {
-                this.state = "PAUSED";
-                PortalBridge.gameplayStop();
-                this.showScreen("pause-screen");
-            }
-        }
-
-        resumeGame() {
-            this.state = "PLAYING";
-            PortalBridge.gameplayStart();
-            this.showScreen("hud");
-        }
-
-        retryLevel() {
-            PortalBridge.showInterstitial(() => this.startLevel(this.currentLevelNum));
-        }
-
-        nextLevel() {
-            const next = Math.min(500, this.currentLevelNum + 1);
-            PortalBridge.showInterstitial(() => this.startLevel(next));
-        }
-
-        revivePlayer() {
-            PortalBridge.showRewarded(() => {
-                this.invulnerableTimer = 3.0;
-                this.playerX = 0;
-                this.targetX = 0;
-                this.state = "PLAYING";
-                this.sound.startBGM();
-                this.showScreen("hud");
-                PortalBridge.gameplayStart();
-            });
-        }
-
-        doubleCoins(btnEl) {
-            PortalBridge.showRewarded(() => {
-                SaveManager.data.totalCoins += this.lastEarnedCoins;
-                SaveManager.save();
-                document.getElementById("vic-coins").textContent = `+${this.lastEarnedCoins * 2}`;
-                if (btnEl) btnEl.disabled = true;
-            });
-        }
-
-        goHome() {
-            this.state = "MENU";
-            this.sound.stopBGM();
-            this.updateMenuUI();
-            this.showScreen("menu-screen");
-        }
-
-        startLevel(levelNum) {
-            this.sound.init();
-            this.sound.startBGM();
-
-            this.currentLevelNum = levelNum || 1;
-            this.levelConfig = LEVELS_DATA[(this.currentLevelNum - 1) % LEVELS_DATA.length];
-
-            this.playerX = 0;
-            this.targetX = 0;
-            this.playerY = 0;
-            this.playerZ = 0;
-            this.velocityY = 0;
-            this.isGrounded = true;
-            this.score = 0;
-            this.runGems = 0;
-            this.runCoins = 0;
-            this.currentFormIdx = 0;
-            this.invulnerableTimer = 1.0;
-            this.timeLeft = this.mode === "time" ? this.levelConfig.timeLimit : 60;
-
-            this.obstacles = [];
-            this.collectibles = [];
-            this.particles = [];
-            this.nextSpawnZ = 28;
-            this.populateAhead();
-            this.updateEvolutionHUD();
-
-            this.state = "PLAYING";
-            this.showScreen("hud");
-            document.getElementById("hud-level").textContent = this.mode === "endless" ? "∞" : this.currentLevelNum;
-            document.getElementById("timer-pill").style.display = this.mode === "time" ? "block" : "none";
-            this.updateHUD();
-            PortalBridge.gameplayStart();
-        }
-
-        populateAhead() {
-            const horizon = this.playerZ + 140;
-            const limitZ = (this.mode === "classic" || this.mode === "time") ? this.levelConfig.length - 18 : 9999999;
-            while (this.nextSpawnZ < horizon && this.nextSpawnZ < limitZ) {
-                this.spawnWave(this.nextSpawnZ);
-                this.nextSpawnZ += this.levelConfig.obstacleSpacing;
-            }
-        }
-
-        spawnWave(zPos) {
-            const pool = this.levelConfig.availableObstacles;
-            const type = pool[Math.floor(Math.random() * pool.length)];
-            const laneX = (Math.random() - 0.5) * (this.trackWidth - 2.4);
-
-            this.obstacles.push({
-                type,
-                x: type === "moving_wall" ? 0 : laneX,
-                y: 0,
-                z: zPos,
-                phase: Math.random() * Math.PI * 2,
-                triggered: false
-            });
-
-            const gemX = laneX > 0 ? -2.2 : 2.2;
-            const isCoin = Math.random() < 0.32;
-            this.collectibles.push({
-                type: isCoin ? "coin" : "gem",
-                x: gemX,
-                y: 0.6,
-                z: zPos + 4.5,
-                collected: false
-            });
-        }
-
-        spawnParticles(wx, wy, wz, color, count = 14) {
-            for (let i = 0; i < count; i++) {
-                this.particles.push({
-                    x: wx, y: wy, z: wz,
-                    vx: (Math.random() - 0.5) * 9,
-                    vy: Math.random() * 7 + 2,
-                    vz: (Math.random() - 0.5) * 9,
-                    color,
-                    life: 0.6
-                });
-            }
-        }
-
-        jump() {
-            if (this.state !== "PLAYING" || !this.isGrounded) return;
-            this.velocityY = 12.5 * EVOLUTION_FORMS[this.currentFormIdx].jumpBonus;
-            this.isGrounded = false;
-            this.sound.playJump();
-        }
-
-        update(dt) {
-            this.spinAngle += dt * 3.0;
-
-            for (let i = this.particles.length - 1; i >= 0; i--) {
-                const p = this.particles[i];
-                p.life -= dt;
-                p.vy -= 20 * dt;
-                p.x += p.vx * dt;
-                p.y += p.vy * dt;
-                p.z += p.vz * dt;
-                if (p.life <= 0) this.particles.splice(i, 1);
-            }
-
-            if (this.state !== "PLAYING") return;
-
-            if (this.invulnerableTimer > 0) this.invulnerableTimer -= dt;
-
-            if (this.mode === "time") {
-                this.timeLeft -= dt;
-                document.getElementById("hud-timer").textContent = Math.max(0, Math.ceil(this.timeLeft));
-                if (this.timeLeft <= 0) { this.triggerGameOver("Time ran out!"); return; }
-            }
-
-            const form = EVOLUTION_FORMS[this.currentFormIdx];
-            const endlessRamp = this.mode === "endless" ? Math.min(this.playerZ * 0.012, 16) : 0;
-            const speed = (this.levelConfig.baseSpeed + endlessRamp) * form.speedBonus;
-
-            this.playerZ += speed * dt;
-            this.score += Math.floor(speed * dt * 2.5);
-
-            const maxSide = this.trackWidth / 2 - 0.75;
-            this.targetX = Math.max(-maxSide, Math.min(maxSide, this.targetX));
-            this.playerX += (this.targetX - this.playerX) * Math.min(1, dt * 14);
-
-            if (!this.isGrounded) {
-                this.velocityY -= 30 * dt;
-                this.playerY += this.velocityY * dt;
-                if (this.playerY <= 0) { this.playerY = 0; this.velocityY = 0; this.isGrounded = true; }
-            }
-
-            this.populateAhead();
-
-            for (let i = this.collectibles.length - 1; i >= 0; i--) {
-                const c = this.collectibles[i];
-                const relZ = c.z - this.playerZ;
-                if (!c.collected && Math.abs(relZ) < 1.3 && Math.abs(c.x - this.playerX) < 1.25 && this.playerY < 1.8) {
-                    c.collected = true;
-                    if (c.type === "gem") {
-                        this.runGems++;
-                        this.score += 50;
-                        this.sound.playGem();
-                        this.spawnParticles(c.x, 0.7, relZ, "#00f0ff", 12);
-                        this.checkEvolution();
-                    } else {
-                        this.runCoins++;
-                        this.score += 25;
-                        this.sound.playCoin();
-                        this.spawnParticles(c.x, 0.7, relZ, "#ffd700", 12);
-                    }
-                    this.updateHUD();
-                }
-                if (c.collected || relZ < -10) this.collectibles.splice(i, 1);
-            }
-
-            const t = performance.now() * 0.0026;
-            for (let i = this.obstacles.length - 1; i >= 0; i--) {
-                const o = this.obstacles[i];
-                const relZ = o.z - this.playerZ;
-
-                if (o.type === "moving_block" || o.type === "moving_wall") {
-                    o.x = Math.sin(t + o.phase) * (this.trackWidth / 2 - 1.5);
-                } else if (o.type === "falling_platform") {
-                    if (relZ < 14) o.triggered = true;
-                    if (o.triggered) o.y -= dt * 2.5;
-                }
-
-                if (this.invulnerableTimer <= 0 && Math.abs(relZ) < 0.95 && o.y > -1.2) {
-                    let halfW = 1.05, hitH = 1.3;
-                    if (o.type === "moving_wall") { halfW = 1.65; hitH = 1.9; }
-                    else if (o.type === "spinning_blade") { halfW = 1.85; hitH = 1.05; }
-                    else if (o.type === "laser_gate") { halfW = 1.9; hitH = 1.6; }
-                    else if (o.type === "energy_barrier") { halfW = 1.5; hitH = 0.95; }
-
-                    if (Math.abs(o.x - this.playerX) < halfW && this.playerY < hitH) {
-                        this.sound.playCrash();
-                        this.spawnParticles(this.playerX, this.playerY + 0.6, 0, "#ff2a55", 24);
-                        this.triggerGameOver("You hit a 3D geometric hazard!");
-                        return;
-                    }
-                }
-                if (relZ < -12) this.obstacles.splice(i, 1);
-            }
-
-            if ((this.mode === "classic" || this.mode === "time") && this.playerZ >= this.levelConfig.length) {
-                this.triggerVictory();
-            } else if (this.mode === "evolution" && this.currentFormIdx === EVOLUTION_FORMS.length - 1) {
-                this.triggerVictory();
-            }
-
-            this.updateHUD();
-        }
-
-        render() {
-            const ctx = this.ctx;
-            const theme = this.levelConfig.theme;
-
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height * 0.55);
-            skyGrad.addColorStop(0, theme.skyTop);
-            skyGrad.addColorStop(1, theme.skyBot);
-            ctx.fillStyle = skyGrad;
-            ctx.fillRect(0, 0, this.width, this.height);
-
-            ctx.fillStyle = "#04060d";
-            ctx.fillRect(0, this.height * 0.44, this.width, this.height * 0.56);
-
-            const halfW = this.trackWidth / 2;
-            const nearL = this.project(-halfW, 0, -4);
-            const nearR = this.project(halfW, 0, -4);
-            const farL = this.project(-halfW, 0, 140);
-            const farR = this.project(halfW, 0, 140);
-
-            if (nearL && nearR && farL && farR) {
-                ctx.beginPath();
-                ctx.moveTo(nearL.x, nearL.y); ctx.lineTo(nearR.x, nearR.y);
-                ctx.lineTo(farR.x, farR.y); ctx.lineTo(farL.x, farL.y);
-                ctx.closePath();
-                ctx.fillStyle = theme.road;
-                ctx.fill();
-
-                ctx.strokeStyle = theme.grid;
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.moveTo(nearL.x, nearL.y); ctx.lineTo(farL.x, farL.y);
-                ctx.moveTo(nearR.x, nearR.y); ctx.lineTo(farR.x, farR.y);
-                ctx.stroke();
-
-                ctx.strokeStyle = theme.grid + "33";
-                ctx.lineWidth = 1.5;
-                const gridStep = 10;
-                const offsetZ = -(this.playerZ % gridStep);
-                for (let z = offsetZ; z < 140; z += gridStep) {
-                    if (z < -2) continue;
-                    const p1 = this.project(-halfW, 0, z);
-                    const p2 = this.project(halfW, 0, z);
-                    if (p1 && p2) {
-                        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-                    }
-                }
-            }
-
-            if (this.mode === "classic" || this.mode === "time") {
-                const finRelZ = this.levelConfig.length - this.playerZ;
-                if (finRelZ > -2 && finRelZ < 140) {
-                    const f1 = this.project(-halfW, 0.05, finRelZ);
-                    const f2 = this.project(halfW, 0.05, finRelZ);
-                    if (f1 && f2) {
-                        ctx.strokeStyle = "#00ff88";
-                        ctx.lineWidth = Math.max(4, f1.scale * 0.4);
-                        ctx.beginPath(); ctx.moveTo(f1.x, f1.y); ctx.lineTo(f2.x, f2.y); ctx.stroke();
-                    }
-                }
-            }
-
-            const renderList = [];
-            for (const o of this.obstacles) {
-                const rz = o.z - this.playerZ;
-                if (rz > -4 && rz < 140) renderList.push({ kind: "obs", obj: o, rz });
-            }
-            for (const c of this.collectibles) {
-                const rz = c.z - this.playerZ;
-                if (!c.collected && rz > -4 && rz < 140) renderList.push({ kind: "col", obj: c, rz });
-            }
-            renderList.push({ kind: "player", rz: 0 });
-            renderList.sort((a, b) => b.rz - a.rz);
-
-            for (const item of renderList) {
-                if (item.kind === "obs") this.drawObstacle(item.obj, item.rz);
-                else if (item.kind === "col") this.drawCollectible(item.obj, item.rz);
-                else this.drawPlayer();
-            }
-
-            for (const p of this.particles) {
-                const pr = this.project(p.x, p.y, p.z);
-                if (pr) {
-                    ctx.fillStyle = p.color;
-                    const sz = Math.max(2, pr.scale * 0.16 * p.life);
-                    ctx.fillRect(pr.x - sz / 2, pr.y - sz / 2, sz, sz);
-                }
-            }
-        }
-
-        draw3DBox(wx, wy, wz, w, h, d, topCol, frontCol) {
-            const p000 = this.project(wx - w/2, wy, wz - d/2);
-            const p100 = this.project(wx + w/2, wy, wz - d/2);
-            const p010 = this.project(wx - w/2, wy + h, wz - d/2);
-            const p110 = this.project(wx + w/2, wy + h, wz - d/2);
-            const p011 = this.project(wx - w/2, wy + h, wz + d/2);
-            const p111 = this.project(wx + w/2, wy + h, wz + d/2);
-            if (!p000 || !p100 || !p010 || !p110 || !p011 || !p111) return;
-
-            const ctx = this.ctx;
-            ctx.fillStyle = topCol;
-            ctx.beginPath();
-            ctx.moveTo(p010.x, p010.y); ctx.lineTo(p110.x, p110.y);
-            ctx.lineTo(p111.x, p111.y); ctx.lineTo(p011.x, p011.y);
-            ctx.closePath(); ctx.fill();
-
-            ctx.fillStyle = frontCol;
-            ctx.beginPath();
-            ctx.moveTo(p000.x, p000.y); ctx.lineTo(p100.x, p100.y);
-            ctx.lineTo(p110.x, p110.y); ctx.lineTo(p010.x, p010.y);
-            ctx.closePath(); ctx.fill();
-            ctx.strokeStyle = "rgba(255,255,255,0.28)";
-            ctx.lineWidth = 1;
-            ctx.stroke();
-        }
-
-        drawObstacle(o, rz) {
-            const ctx = this.ctx;
-            if (o.type === "moving_block") this.draw3DBox(o.x, o.y, rz, 2.0, 1.4, 1.4, "#ff6b8b", "#ff1e4d");
-            else if (o.type === "moving_wall") this.draw3DBox(o.x, o.y, rz, 3.2, 2.0, 0.9, "#fb7185", "#e11d48");
-            else if (o.type === "falling_platform") this.draw3DBox(o.x, o.y, rz, 2.5, 0.45, 2.8, "#c084fc", "#9333ea");
-            else if (o.type === "energy_barrier") this.draw3DBox(o.x, o.y, rz, 3.0, 1.0, 0.4, "#67e8f9", "rgba(0,240,255,0.75)");
-            else if (o.type === "laser_gate") {
-                this.draw3DBox(o.x - 1.8, 0, rz, 0.45, 2.4, 0.45, "#64748b", "#334155");
-                this.draw3DBox(o.x + 1.8, 0, rz, 0.45, 2.4, 0.45, "#64748b", "#334155");
-                const b1 = this.project(o.x - 1.8, 1.3, rz);
-                const b2 = this.project(o.x + 1.8, 1.3, rz);
-                if (b1 && b2) {
-                    ctx.strokeStyle = "#ff0044";
-                    ctx.lineWidth = Math.max(3, b1.scale * 0.16);
-                    ctx.beginPath(); ctx.moveTo(b1.x, b1.y); ctx.lineTo(b2.x, b2.y); ctx.stroke();
-                }
-            } else if (o.type === "spinning_blade") {
-                const c = this.project(o.x, 0.85, rz);
-                if (c) {
-                    const r = c.scale * 1.85;
-                    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(this.spinAngle * 2);
-                    ctx.fillStyle = "#ffaa00";
-                    ctx.fillRect(-r, -r * 0.14, r * 2, r * 0.28);
-                    ctx.fillRect(-r * 0.14, -r, r * 0.28, r * 2);
-                    ctx.restore();
-                }
-            }
-        }
-
-        drawCollectible(c, rz) {
-            const p = this.project(c.x, c.y + Math.sin(this.spinAngle + rz) * 0.15, rz);
-            if (!p) return;
-            const ctx = this.ctx;
-            const r = Math.max(5, p.scale * 0.42);
-            ctx.save(); ctx.translate(p.x, p.y);
-            if (c.type === "coin") {
-                ctx.fillStyle = "#ffd700";
-                ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke();
-            } else {
-                ctx.rotate(this.spinAngle);
-                ctx.fillStyle = "#00f0ff";
-                ctx.beginPath();
-                ctx.moveTo(0, -r * 1.2); ctx.lineTo(r * 0.9, 0);
-                ctx.lineTo(0, r * 1.2); ctx.lineTo(-r * 0.9, 0);
-                ctx.closePath(); ctx.fill();
-                ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke();
-            }
-            ctx.restore();
-        }
-
-        drawPlayer() {
-            const form = EVOLUTION_FORMS[this.currentFormIdx];
-            const shadow = this.project(this.playerX, 0.02, 0);
-            const center = this.project(this.playerX, this.playerY + 0.65, 0);
-            if (!center) return;
-
-            const ctx = this.ctx;
-            const r = center.scale * 0.65 * form.scale;
-
-            if (shadow) {
-                ctx.fillStyle = "rgba(0,0,0,0.45)";
-                ctx.beginPath(); ctx.ellipse(shadow.x, shadow.y, r * 1.05, r * 0.42, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = form.color; ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.ellipse(shadow.x, shadow.y, r * 1.25, r * 0.5, 0, 0, Math.PI * 2); ctx.stroke();
-            }
-
-            if (this.invulnerableTimer > 0 && Math.floor(this.invulnerableTimer * 12) % 2 === 0) return;
-
-            ctx.save();
-            ctx.translate(center.x, center.y);
-            ctx.shadowColor = form.color;
-            ctx.shadowBlur = 18;
-            ctx.fillStyle = form.color;
-            ctx.strokeStyle = "#ffffff";
-            ctx.lineWidth = 2;
-
-            if (this.currentFormIdx === 0) {
-                this.draw3DBox(this.playerX, this.playerY, 0, 1.15, 1.15, 1.15, "#80f8ff", "#00f0ff");
-            } else if (this.currentFormIdx === 1) {
-                const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
-                grad.addColorStop(0, "#ffffff"); grad.addColorStop(0.4, form.color); grad.addColorStop(1, "#004422");
-                ctx.fillStyle = grad;
-                ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-            } else if (this.currentFormIdx === 2) {
-                ctx.beginPath(); ctx.moveTo(0, -r * 1.2); ctx.lineTo(r * 1.1, r * 0.85); ctx.lineTo(-r * 1.1, r * 0.85); ctx.closePath(); ctx.fill(); ctx.stroke();
-            } else if (this.currentFormIdx === 3) {
-                ctx.beginPath(); ctx.moveTo(0, -r * 1.25); ctx.lineTo(r, 0); ctx.lineTo(0, r * 1.25); ctx.lineTo(-r, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-            } else if (this.currentFormIdx === 4) {
-                ctx.rotate(this.spinAngle * 0.5);
-                ctx.beginPath();
-                for (let k = 0; k < 6; k++) {
-                    const ang = (k * Math.PI) / 3;
-                    const px = Math.cos(ang) * r, py = Math.sin(ang) * r;
-                    k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-                }
-                ctx.closePath(); ctx.fill(); ctx.stroke();
-            } else if (this.currentFormIdx === 5) {
-                ctx.rotate(-this.spinAngle * 0.7);
-                ctx.beginPath();
-                for (let k = 0; k < 8; k++) {
-                    const rad = k % 2 === 0 ? r * 1.25 : r * 0.55;
-                    const ang = (k * Math.PI) / 4;
-                    const px = Math.cos(ang) * rad, py = Math.sin(ang) * rad;
-                    k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-                }
-                ctx.closePath(); ctx.fill(); ctx.stroke();
-            } else {
-                ctx.rotate(this.spinAngle);
-                ctx.beginPath(); ctx.arc(0, 0, r * 0.75, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = "#00f0ff"; ctx.lineWidth = 3;
-                ctx.strokeRect(-r * 0.95, -r * 0.95, r * 1.9, r * 1.9);
-            }
-            ctx.restore();
-        }
-
-        checkEvolution() {
-            for (let i = EVOLUTION_FORMS.length - 1; i >= 0; i--) {
-                if (this.runGems >= EVOLUTION_FORMS[i].requiredGems && i > this.currentFormIdx) {
-                    this.currentFormIdx = i;
-                    this.sound.playEvolve();
-                    this.spawnParticles(this.playerX, this.playerY + 0.7, 0, EVOLUTION_FORMS[i].color, 26);
-                    break;
-                }
-            }
-            this.updateEvolutionHUD();
-        }
-
-        updateEvolutionHUD() {
-            const curr = EVOLUTION_FORMS[this.currentFormIdx];
-            const next = EVOLUTION_FORMS[this.currentFormIdx + 1];
-            document.getElementById("evo-stage-name").textContent = curr.name;
-            if (!next) {
-                document.getElementById("evo-next-name").textContent = "MAX FORM REACHED!";
-                document.getElementById("evo-progress-fill").style.width = "100%";
-            } else {
-                document.getElementById("evo-next-name").textContent = `NEXT: ${next.shortName} (${next.requiredGems} GEMS)`;
-                const span = next.requiredGems - curr.requiredGems;
-                const prog = Math.max(0, Math.min(100, ((this.runGems - curr.requiredGems) / span) * 100));
-                document.getElementById("evo-progress-fill").style.width = `${prog}%`;
-            }
-        }
-
-        updateHUD() {
-            document.getElementById("hud-score").textContent = this.score;
-            document.getElementById("hud-gems").textContent = this.runGems;
-        }
-
-        triggerGameOver(reason) {
-            this.state = "GAMEOVER";
-            this.sound.stopBGM();
-            PortalBridge.gameplayStop();
-            if (this.score > SaveManager.data.highScore) SaveManager.data.highScore = this.score;
-            SaveManager.data.totalGems += this.runGems;
-            SaveManager.data.totalCoins += this.runCoins;
-            SaveManager.save();
-
-            document.getElementById("gameover-reason").textContent = reason;
-            document.getElementById("go-score").textContent = this.score;
-            document.getElementById("go-highscore").textContent = SaveManager.data.highScore;
-            document.getElementById("go-form").textContent = EVOLUTION_FORMS[this.currentFormIdx].shortName;
-            this.showScreen("gameover-screen");
-        }
-
-        triggerVictory() {
-            this.state = "VICTORY";
-            this.sound.stopBGM();
-            this.sound.playVictory();
-            PortalBridge.gameplayStop();
-
-            const bonusCoins = this.levelConfig.coinReward + this.runCoins;
-            if (this.score > SaveManager.data.highScore) SaveManager.data.highScore = this.score;
-            SaveManager.data.totalGems += this.runGems;
-            SaveManager.data.totalCoins += bonusCoins;
-
-            if (this.mode === "classic" && this.currentLevelNum >= SaveManager.data.unlockedLevel && this.currentLevelNum < 500) {
-                SaveManager.data.unlockedLevel = this.currentLevelNum + 1;
-                SaveManager.data.selectedLevel = SaveManager.data.unlockedLevel;
-            }
-            SaveManager.save();
-
-            this.lastEarnedCoins = bonusCoins;
-            document.getElementById("vic-score").textContent = this.score;
-            document.getElementById("vic-coins").textContent = `+${bonusCoins}`;
-            document.getElementById("vic-form").textContent = EVOLUTION_FORMS[this.currentFormIdx].shortName;
-            document.getElementById("btn-double-coins").disabled = false;
-            this.showScreen("victory-screen");
-        }
-
-        showScreen(id) {
-            ["hud", "menu-screen", "pause-screen", "gameover-screen", "victory-screen"].forEach(s => {
-                document.getElementById(s).classList.toggle("hidden", s !== id);
-            });
-        }
-
-        updateMenuUI() {
-            document.getElementById("menu-gems").textContent = SaveManager.data.totalGems;
-            document.getElementById("menu-coins").textContent = SaveManager.data.totalCoins;
-            document.getElementById("menu-highscore").textContent = SaveManager.data.highScore;
-            document.getElementById("selected-level-num").textContent = this.currentLevelNum;
-            document.getElementById("btn-mute").textContent = this.sound.muted ? "🔇" : "🔊";
-
-            const dailyBtn = document.getElementById("btn-daily-reward");
-            if (SaveManager.canClaimDaily()) {
-                dailyBtn.disabled = false;
-                dailyBtn.textContent = "🎁 CLAIM DAILY REWARD (+100 COINS)";
-            } else {
-                dailyBtn.disabled = true;
-                dailyBtn.textContent = "✅ DAILY REWARD CLAIMED";
-            }
-        }
-
-        bindInputs() {
-            window.addEventListener("resize", () => this.resize());
-
-            window.addEventListener("keydown", (e) => {
-                if (this.state !== "PLAYING") return;
-                const step = 1.45;
-                if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") this.targetX -= step;
-                if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") this.targetX += step;
-                if (e.key === "ArrowUp" || e.key === "w" || e.key === "W" || e.key === " ") this.jump();
-            });
-
-            let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
-            this.canvas.addEventListener("touchstart", (e) => {
-                if (e.touches.length > 0) {
-                    touchStartX = e.touches[0].clientX;
-                    touchStartY = e.touches[0].clientY;
-                    touchStartTime = performance.now();
-                }
-            }, { passive: true });
-
-            this.canvas.addEventListener("touchmove", (e) => {
-                if (this.state !== "PLAYING" || e.touches.length === 0) return;
-                const dx = e.touches[0].clientX - touchStartX;
-                touchStartX = e.touches[0].clientX;
-                this.targetX += (dx / this.width) * (this.trackWidth * 1.45);
-            }, { passive: true });
-
-            this.canvas.addEventListener("touchend", (e) => {
-                if (this.state !== "PLAYING") return;
-                const elapsed = performance.now() - touchStartTime;
-                const dy = e.changedTouches[0] ? touchStartY - e.changedTouches[0].clientY : 0;
-                if (elapsed < 220 || dy > 35) this.jump();
-            }, { passive: true });
-        }
-
-        loop(now) {
-            requestAnimationFrame(this.loop);
-            const dt = Math.min((now - this.lastTime) / 1000, 0.05);
-            this.lastTime = now;
-            this.update(dt);
-            this.render();
+    async init() {
+        if (window.CrazyGames && window.CrazyGames.SDK) {
+            try { await window.CrazyGames.SDK.init(); } catch (e) {}
         }
     }
 
-    window.game = new ShapeEvolutionGame();
-    </script>
-</body>
-</html>
+    gameplayStart() {
+        try {
+            if (window.CrazyGames?.SDK?.game) window.CrazyGames.SDK.game.gameplayStart();
+        } catch (e) {}
+    }
+
+    gameplayStop() {
+        try {
+            if (window.CrazyGames?.SDK?.game) window.CrazyGames.SDK.game.gameplayStop();
+        } catch (e) {}
+    }
+
+    happyTime() {
+        try {
+            if (window.CrazyGames?.SDK?.game) window.CrazyGames.SDK.game.happytime();
+        } catch (e) {}
+    }
+
+    showMidgameAd(onComplete) {
+        if (this.isAdPlaying) return;
+        this.isAdPlaying = true;
+        if (window.game) window.game.pauseForAd(true);
+
+        const finish = () => {
+            this.isAdPlaying = false;
+            if (window.game) window.game.pauseForAd(false);
+            if (onComplete) onComplete();
+        };
+
+        // 1. CrazyGames v3
+        if (window.CrazyGames?.SDK?.ad) {
+            window.CrazyGames.SDK.ad.requestAd("midgame", {
+                adStarted: () => {},
+                adFinished: finish,
+                adError: finish
+            });
+            return;
+        }
+        // 2. GameDistribution
+        if (typeof gdsdk !== 'undefined' && gdsdk.showAd !== 'undefined') {
+            gdsdk.showAd().then(finish).catch(finish);
+            return;
+        }
+        // 3. GameMonetize
+        if (typeof sdk !== 'undefined' && sdk.showBanner !== 'undefined') {
+            sdk.showBanner();
+            setTimeout(finish, 800);
+            return;
+        }
+        // Fallback (Local testing)
+        setTimeout(finish, 150);
+    }
+
+    showRewardedAd(onRewarded, onClosed) {
+        if (this.isAdPlaying) return;
+        this.isAdPlaying = true;
+        if (window.game) window.game.pauseForAd(true);
+
+        const finish = (success) => {
+            this.isAdPlaying = false;
+            if (window.game) window.game.pauseForAd(false);
+            if (success && onRewarded) onRewarded();
+            if (onClosed) onClosed();
+        };
+
+        // 1. CrazyGames v3
+        if (window.CrazyGames?.SDK?.ad) {
+            window.CrazyGames.SDK.ad.requestAd("rewarded", {
+                adStarted: () => {},
+                adFinished: () => finish(true),
+                adError: () => finish(false)
+            });
+            return;
+        }
+        // 2. GameDistribution
+        if (typeof gdsdk !== 'undefined' && gdsdk.showAd !== 'undefined') {
+            gdsdk.showAd('rewarded').then(() => finish(true)).catch(() => finish(false));
+            return;
+        }
+        // 3. GameMonetize
+        if (typeof sdk !== 'undefined' && sdk.showBanner !== 'undefined') {
+            sdk.showBanner();
+            setTimeout(() => finish(true), 800);
+            return;
+        }
+        // Fallback (Local testing grants reward cleanly)
+        setTimeout(() => finish(true), 200);
+    }
+}
+
+/**
+ * ============================================================================
+ * 2. ZERO-ASSET PROCEDURAL WEB AUDIO ENGINE
+ * ============================================================================
+ */
+class SoundEngine {
+    constructor() {
+        this.ctx = null;
+        this.muted = localStorage.getItem('se3d_muted') === 'true';
+    }
+
+    unlock() {
+        if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
+    toggleMute() {
+        this.muted = !this.muted;
+        localStorage.setItem('se3d_muted', this.muted);
+        return this.muted;
+    }
+
+    playTone(freq, type, duration, vol = 0.15, slideFreq = null) {
+        if (this.muted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        if (slideFreq) {
+            osc.frequency.exponentialRampToValueAtTime(slideFreq, this.ctx.currentTime + duration);
+        }
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    }
+
+    playGem(combo = 1) {
+        const base = 520 + Math.min(combo * 45, 600);
+        this.playTone(base, 'sine', 0.14, 0.16, base * 1.35);
+    }
+
+    playEvolve() {
+        this.playTone(330, 'triangle', 0.45, 0.22, 880);
+        setTimeout(() => this.playTone(660, 'sine', 0.4, 0.18, 1320), 100);
+    }
+
+    playJump() {
+        this.playTone(220, 'sine', 0.22, 0.15, 480);
+    }
+
+    playCrash() {
+        this.playTone(140, 'sawtooth', 0.4, 0.25, 45);
+    }
+
+    playWin() {
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((n, i) => setTimeout(() => this.playTone(n, 'triangle', 0.3, 0.18), i * 110));
+    }
+}
+
+/**
+ * ============================================================================
+ * 3. DETERMINISTIC 500-LEVEL GENERATOR & EVOLUTION SYSTEM
+ * ============================================================================
+ */
+const EVOLUTION_STAGES = [
+    { name: "STAGE 1: BASIC CUBE", color: 0x00f0ff, emissive: 0x005577, scale: 1.0 },
+    { name: "STAGE 2: PRISM CORE", color: 0x00ff88, emissive: 0x005522, scale: 1.12 },
+    { name: "STAGE 3: STAR DODECA", color: 0xff00aa, emissive: 0x660044, scale: 1.24 },
+    { name: "STAGE 4: HYPER TORUS", color: 0xffaa00, emissive: 0x663300, scale: 1.34 },
+    { name: "STAGE 5: ULTIMATE ENERGY", color: 0xffffff, emissive: 0x00f0ff, scale: 1.45 }
+];
+
+class LevelGenerator {
+    static mulberry32(a) {
+        return function() {
+            var t = a += 0x6D2B79F5;
+            t = Math.imul(t ^ t >>> 15, t | 1);
+            t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        }
+    }
+
+    static generate(levelNum) {
+        const clamped = Math.max(1, Math.min(500, levelNum));
+        const rand = this.mulberry32(clamped * 7919);
+        
+        const difficulty = Math.min(1, (clamped - 1) / 350);
+        const speed = 22 + difficulty * 18;
+        const trackLength = 260 + Math.min(clamped * 1.4, 420);
+        const laneWidth = 3.2;
+        const lanes = [-laneWidth, 0, laneWidth];
+
+        const items = [];
+        let z = 32;
+        const endZ = trackLength - 25;
+
+        while (z < endZ) {
+            const pattern = rand();
+            const safeLaneIdx = Math.floor(rand() * 3);
+
+            if (pattern < 0.45) {
+                for (let i = 0; i < 3; i++) {
+                    if (i === safeLaneIdx) {
+                        items.push({ type: 'gem', x: lanes[i], z: z, y: 1.0 });
+                    } else if (rand() < 0.55 + difficulty * 0.35) {
+                        const obsType = rand() < 0.4 ? 'spinner' : 'block';
+                        items.push({ type: obsType, x: lanes[i], z: z, y: 1.0 });
+                    }
+                }
+                z += 16 - difficulty * 3.5;
+            } else if (pattern < 0.75) {
+                for (let i = 0; i < 3; i++) {
+                    items.push({ type: 'low_laser', x: lanes[i], z: z, y: 0.65 });
+                }
+                items.push({ type: 'gem', x: lanes[safeLaneIdx], z: z, y: 2.6 });
+                z += 18;
+            } else {
+                const startLane = Math.floor(rand() * 3);
+                for (let step = 0; step < 3; step++) {
+                    const lane = (startLane + step) % 3;
+                    items.push({ type: 'gem', x: lanes[lane], z: z + step * 5, y: 1.0 });
+                    const blockLane = (lane + 1) % 3;
+                    if (rand() < 0.7) {
+                        items.push({ type: 'block', x: lanes[blockLane], z: z + step * 5, y: 1.0 });
+                    }
+                }
+                z += 20;
+            }
+        }
+
+        return {
+            levelNum: clamped,
+            speed,
+            trackLength,
+            items,
+            gemsNeededForMaxEvo: Math.max(8, Math.floor((trackLength / 22)))
+        };
+    }
+}
+
+/**
+ * ============================================================================
+ * 4. MAIN 3D ENGINE & GAME CONTROLLER
+ * ============================================================================
+ */
+class ShapeEvolutionGame {
+    constructor() {
+        this.portal = new PortalBridge();
+        this.sound = new SoundEngine();
+
+        this.currentLevel = parseInt(localStorage.getItem('se3d_level') || '1', 10);
+        this.coins = parseInt(localStorage.getItem('se3d_coins') || '0', 10);
+        this.highScore = parseInt(localStorage.getItem('se3d_highscore') || '0', 10);
+
+        this.state = 'MENU';
+        this.adPaused = false;
+        this.score = 0;
+        this.levelCoins = 0;
+        this.evoPoints = 0;
+        this.evoStage = 0;
+        this.combo = 0;
+
+        this.playerX = 0;
+        this.targetX = 0;
+        this.playerY = 1.0;
+        this.velY = 0;
+        this.isGrounded = true;
+        this.playerZ = 0;
+        this.invincibleTimer = 0;
+
+        this.initThree();
+        this.initGeometries();
+        this.bindUI();
+        this.bindControls();
+        this.updateHUD();
+
+        this.lastTime = performance.now();
+        this.animate = this.animate.bind(this);
+        requestAnimationFrame(this.animate);
+    }
+
+    initThree() {
+        const canvas = document.getElementById('game-canvas');
+        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+  
