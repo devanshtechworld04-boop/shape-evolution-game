@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Neon Shape Evolution 3D 500</title>
-    
-    <!-- GAMEMONETIZE SDK -->
     <script type="text/javascript">
         window.SDK_OPTIONS = {
             gameId: "eceda687iwwrhafaw43t3oerrojg3kl",
@@ -21,51 +19,36 @@
             a.getElementById(c) || (a = a.createElement(b), a.id = c, a.src = "https://api.gamemonetize.com/sdk.js", d.parentNode.insertBefore(a, d))
         })(document, "script", "gamemonetize-sdk");
     </script>
-
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background: #050510; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #050510; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
         #game-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-        
-        /* HUD & Overlays */
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; z-index: 5; }
         .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; pointer-events: auto; }
         .stat-pill { background: rgba(15, 20, 40, 0.85); border: 1px solid rgba(0, 240, 255, 0.4); padding: 6px 14px; border-radius: 30px; color: #fff; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; }
         .stat-pill span.accent { color: #00f0ff; }
         .stat-pill span.gold { color: #ffd700; }
-        
         .icon-btn { background: rgba(15, 20, 40, 0.85); border: 1px solid rgba(255, 255, 255, 0.3); color: #fff; width: 38px; height: 38px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
-
-        /* Evolution Progress Bar */
         .evo-container { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: min(320px, 85%); text-align: center; }
         .evo-label { color: #fff; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; text-shadow: 0 0 8px #ff00aa; }
         .evo-bar-bg { width: 100%; height: 8px; background: rgba(255,255,255,0.15); border-radius: 10px; overflow: hidden; }
         .evo-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #00f0ff, #ff00aa, #ffd700); transition: width 0.2s ease-out; }
-
-        /* Screens (Menu, Level Complete, Game Over) */
         .modal-screen { position: fixed; inset: 0; background: rgba(5, 8, 22, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; z-index: 999; text-align: center; padding: 16px; }
         .hidden { display: none !important; }
-        
         h1.game-title { font-size: clamp(26px, 6vw, 54px); font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 2px; line-height: 1.1; margin-bottom: 10px; text-shadow: 0 0 20px rgba(0, 240, 255, 0.8); }
         h1.game-title span { color: #00f0ff; }
         p.subtitle { color: #a0b0d0; font-size: 14px; max-width: 420px; margin-bottom: 22px; line-height: 1.4; }
-        
         button { touch-action: manipulation; cursor: pointer; pointer-events: auto; }
         .btn-primary { background: linear-gradient(135deg, #00f0ff, #0077ff); color: #050510; border: none; padding: 15px 40px; font-size: 18px; font-weight: 900; border-radius: 50px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 6px 20px rgba(0, 240, 255, 0.5); margin: 6px; }
-        .btn-primary:active { transform: scale(0.96); }
-        
         .btn-reward { background: linear-gradient(135deg, #ffd700, #ff8800); color: #111; border: none; padding: 13px 28px; font-size: 15px; font-weight: 800; border-radius: 50px; margin: 6px; display: inline-flex; align-items: center; gap: 8px; }
         .btn-secondary { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 11px 24px; font-size: 15px; font-weight: 700; border-radius: 50px; margin: 6px; }
-
         .level-badge { background: rgba(255, 0, 170, 0.2); border: 1px solid #ff00aa; color: #ff66cc; padding: 5px 14px; border-radius: 20px; font-weight: 800; font-size: 12px; margin-bottom: 12px; letter-spacing: 1px; }
         .controls-hint { position: absolute; bottom: 14px; width: 100%; text-align: center; color: rgba(255,255,255,0.55); font-size: 12px; pointer-events: none; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-
     <canvas id="game-canvas"></canvas>
-
     <div id="ui-layer">
         <div class="top-bar">
             <div class="stat-pill">LVL <span class="accent" id="hud-level">1</span>/500</div>
@@ -76,16 +59,12 @@
                 <button class="icon-btn" id="btn-pause" type="button">⏸</button>
             </div>
         </div>
-
         <div class="evo-container" id="evo-hud">
             <div class="evo-label" id="evo-stage-name">STAGE 1: BASIC CUBE</div>
             <div class="evo-bar-bg"><div class="evo-bar-fill" id="evo-bar-fill"></div></div>
         </div>
-
         <div class="controls-hint">DRAG / A-D / ARROWS TO STEER • TAP / SPACE TO JUMP</div>
     </div>
-
-    <!-- MAIN MENU -->
     <div class="modal-screen" id="screen-menu">
         <div class="level-badge">500 HANDCRAFTED LEVELS</div>
         <h1 class="game-title">NEON SHAPE<br>EVOLUTION <span>3D 500</span></h1>
@@ -93,8 +72,6 @@
         <button class="btn-primary" id="btn-play" type="button">PLAY LEVEL <span id="menu-lvl-num">1</span></button>
         <div style="margin-top:12px; color:#ffd700; font-weight:700; font-size:14px;">HIGH SCORE: <span id="menu-highscore">0</span></div>
     </div>
-
-    <!-- LEVEL COMPLETE -->
     <div class="modal-screen hidden" id="screen-win">
         <div class="level-badge" style="border-color:#00ff88; color:#00ff88;">EVOLUTION COMPLETE!</div>
         <h1 class="game-title">LEVEL <span id="win-lvl-num">1</span> CLEARED</h1>
@@ -102,8 +79,6 @@
         <button class="btn-reward" id="btn-double-coins" type="button">🎬 CLAIM 2X GEMS (+100)</button>
         <button class="btn-primary" id="btn-next-level" type="button">NEXT LEVEL ➔</button>
     </div>
-
-    <!-- GAME OVER -->
     <div class="modal-screen hidden" id="screen-gameover">
         <div class="level-badge" style="border-color:#ff3355; color:#ff5577;">SHATTERED!</div>
         <h1 class="game-title">TRY <span>AGAIN</span></h1>
@@ -112,84 +87,43 @@
         <button class="btn-primary" id="btn-retry" type="button">RESTART LEVEL</button>
         <button class="btn-secondary" id="btn-home" type="button">MAIN MENU</button>
     </div>
-
-    <!-- PAUSE SCREEN -->
     <div class="modal-screen hidden" id="screen-pause">
         <h1 class="game-title">GAME <span>PAUSED</span></h1>
         <button class="btn-primary" id="btn-resume" type="button">RESUME</button>
         <button class="btn-secondary" id="btn-pause-home" type="button">QUIT TO MENU</button>
     </div>
-
 <script>
 class PortalBridge {
-    constructor() {
-        this.isAdPlaying = false;
-    }
-
+    constructor() { this.isAdPlaying = false; }
     showAd(onComplete) {
         if (this.isAdPlaying) return;
         this.isAdPlaying = true;
         if (window.game) window.game.pauseForAd(true);
-
-        const finish = () => {
-            this.isAdPlaying = false;
-            if (window.game) window.game.pauseForAd(false);
-            if (onComplete) onComplete();
-        };
-
-        try {
-            if (typeof sdk !== 'undefined' && typeof sdk.showBanner === 'function') {
-                sdk.showBanner();
-                setTimeout(finish, 1200);
-                return;
-            }
-        } catch (e) {}
+        const finish = () => { this.isAdPlaying = false; if (window.game) window.game.pauseForAd(false); if (onComplete) onComplete(); };
+        try { if (typeof sdk !== 'undefined' && typeof sdk.showBanner === 'function') { sdk.showBanner(); setTimeout(finish, 1200); return; } } catch (e) {}
         setTimeout(finish, 150);
     }
 }
-
 class SoundEngine {
-    constructor() {
-        this.ctx = null;
-        this.muted = localStorage.getItem('se3d_muted') === 'true';
-    }
-    unlock() {
-        try {
-            if (!this.ctx) {
-                const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                if (AudioCtx) this.ctx = new AudioCtx();
-            }
-            if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
-        } catch(e) {}
-    }
-    toggleMute() {
-        this.muted = !this.muted;
-        localStorage.setItem('se3d_muted', this.muted);
-        return this.muted;
-    }
-    playTone(freq, type, duration, vol = 0.15, slideFreq = null) {
+    constructor() { this.ctx = null; this.muted = localStorage.getItem('se3d_muted') === 'true'; }
+    unlock() { try { if (!this.ctx) { const A = window.AudioContext || window.webkitAudioContext; if (A) this.ctx = new A(); } if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); } catch(e) {} }
+    toggleMute() { this.muted = !this.muted; localStorage.setItem('se3d_muted', this.muted); return this.muted; }
+    playTone(f, t, d, v = 0.15, sf = null) {
         if (this.muted || !this.ctx) return;
         try {
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-            if (slideFreq) osc.frequency.exponentialRampToValueAtTime(slideFreq, this.ctx.currentTime + duration);
-            gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start();
-            osc.stop(this.ctx.currentTime + duration);
+            const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+            o.type = t; o.frequency.setValueAtTime(f, this.ctx.currentTime);
+            if (sf) o.frequency.exponentialRampToValueAtTime(sf, this.ctx.currentTime + d);
+            g.gain.setValueAtTime(v, this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + d);
+            o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime + d);
         } catch(e) {}
     }
-    playGem(combo = 1) { const base = 520 + Math.min(combo * 45, 600); this.playTone(base, 'sine', 0.14, 0.16, base * 1.35); }
+    playGem(c = 1) { const b = 520 + Math.min(c * 45, 600); this.playTone(b, 'sine', 0.14, 0.16, b * 1.35); }
     playEvolve() { this.playTone(330, 'triangle', 0.45, 0.22, 880); }
     playJump() { this.playTone(220, 'sine', 0.22, 0.15, 480); }
     playCrash() { this.playTone(140, 'sawtooth', 0.4, 0.25, 45); }
     playWin() { [523, 659, 783, 1046].forEach((n, i) => setTimeout(() => this.playTone(n, 'triangle', 0.3, 0.18), i * 110)); }
 }
-
 const EVOLUTION_STAGES = [
     { name: "STAGE 1: BASIC CUBE", color: 0x00f0ff, emissive: 0x005577, scale: 1.0 },
     { name: "STAGE 2: PRISM CORE", color: 0x00ff88, emissive: 0x005522, scale: 1.12 },
@@ -197,44 +131,30 @@ const EVOLUTION_STAGES = [
     { name: "STAGE 4: HYPER TORUS", color: 0xffaa00, emissive: 0x663300, scale: 1.34 },
     { name: "STAGE 5: ULTIMATE ENERGY", color: 0xffffff, emissive: 0x00f0ff, scale: 1.45 }
 ];
-
 class LevelGenerator {
-    static mulberry32(a) {
-        return function() {
-            var t = a += 0x6D2B79F5;
-            t = Math.imul(t ^ t >>> 15, t | 1);
-            t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-            return ((t ^ t >>> 14) >>> 0) / 4294967296;
-        }
-    }
+    static mulberry32(a) { return function() { var t = a += 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; } }
     static generate(levelNum) {
-        const clamped = Math.max(1, Math.min(500, levelNum));
-        const rand = this.mulberry32(clamped * 7919);
-        const difficulty = Math.min(1, (clamped - 1) / 350);
-        const speed = 22 + difficulty * 18;
-        const trackLength = 260 + Math.min(clamped * 1.4, 420);
-        const lanes = [-3.2, 0, 3.2];
-        const items = [];
+        const clamped = Math.max(1, Math.min(500, levelNum)), rand = this.mulberry32(clamped * 7919);
+        const difficulty = Math.min(1, (clamped - 1) / 350), speed = 22 + difficulty * 18, trackLength = 260 + Math.min(clamped * 1.4, 420), lanes = [-3.2, 0, 3.2], items = [];
         let z = 32;
         while (z < trackLength - 25) {
-            const pattern = rand();
-            const safeLaneIdx = Math.floor(rand() * 3);
+            const pattern = rand(), safe = Math.floor(rand() * 3);
             if (pattern < 0.45) {
                 for (let i = 0; i < 3; i++) {
-                    if (i === safeLaneIdx) items.push({ type: 'gem', x: lanes[i], z: z, y: 1.0 });
+                    if (i === safe) items.push({ type: 'gem', x: lanes[i], z: z, y: 1.0 });
                     else if (rand() < 0.55 + difficulty * 0.35) items.push({ type: rand() < 0.4 ? 'spinner' : 'block', x: lanes[i], z: z, y: 1.0 });
                 }
                 z += 16 - difficulty * 3.5;
             } else if (pattern < 0.75) {
                 for (let i = 0; i < 3; i++) items.push({ type: 'low_laser', x: lanes[i], z: z, y: 0.65 });
-                items.push({ type: 'gem', x: lanes[safeLaneIdx], z: z, y: 2.6 });
+                items.push({ type: 'gem', x: lanes[safe], z: z, y: 2.6 });
                 z += 18;
             } else {
-                const startLane = Math.floor(rand() * 3);
-                for (let step = 0; step < 3; step++) {
-                    const lane = (startLane + step) % 3;
-                    items.push({ type: 'gem', x: lanes[lane], z: z + step * 5, y: 1.0 });
-                    if (rand() < 0.7) items.push({ type: 'block', x: lanes[(lane + 1) % 3], z: z + step * 5, y: 1.0 });
+                const start = Math.floor(rand() * 3);
+                for (let s = 0; s < 3; s++) {
+                    const lane = (start + s) % 3;
+                    items.push({ type: 'gem', x: lanes[lane], z: z + s * 5, y: 1.0 });
+                    if (rand() < 0.7) items.push({ type: 'block', x: lanes[(lane + 1) % 3], z: z + s * 5, y: 1.0 });
                 }
                 z += 20;
             }
@@ -242,7 +162,6 @@ class LevelGenerator {
         return { levelNum: clamped, speed, trackLength, items, gemsNeededForMaxEvo: Math.max(8, Math.floor(trackLength / 22)) };
     }
 }
-
 class ShapeEvolutionGame {
     constructor() {
         this.portal = new PortalBridge();
@@ -250,20 +169,9 @@ class ShapeEvolutionGame {
         this.currentLevel = parseInt(localStorage.getItem('se3d_level') || '1', 10);
         this.coins = parseInt(localStorage.getItem('se3d_coins') || '0', 10);
         this.highScore = parseInt(localStorage.getItem('se3d_highscore') || '0', 10);
-        this.state = 'MENU';
-        this.adPaused = false;
-        this.score = 0;
-        this.levelCoins = 0;
-        this.evoPoints = 0;
-        this.evoStage = 0;
-        this.combo = 0;
-        this.playerX = 0;
-        this.targetX = 0;
-        this.playerY = 1.0;
-        this.velY = 0;
-        this.isGrounded = true;
-        this.playerZ = 0;
-        this.invincibleTimer = 0;
+        this.state = 'MENU'; this.adPaused = false; this.score = 0; this.levelCoins = 0;
+        this.evoPoints = 0; this.evoStage = 0; this.combo = 0; this.playerX = 0; this.targetX = 0;
+        this.playerY = 1.0; this.velY = 0; this.isGrounded = true; this.playerZ = 0; this.invincibleTimer = 0;
 
         this.bindUI();
         this.bindControls();
@@ -275,115 +183,190 @@ class ShapeEvolutionGame {
         this.animate = this.animate.bind(this);
         requestAnimationFrame(this.animate);
     }
-
     initThree() {
         const canvas = document.getElementById('game-canvas');
-        const w = Math.max(300, window.innerWidth || 800);
-        const h = Math.max(200, window.innerHeight || 600);
+        const w = Math.max(300, window.innerWidth || 800), h = Math.max(200, window.innerHeight || 600);
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'default' });
-        this.renderer.setSize(w, h);
-        this.renderer.setPixelRatio(1);
-
-        this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x050512);
-        this.scene.fog = new THREE.FogExp2(0x050512, 0.011);
-
-        this.camera = new THREE.PerspectiveCamera(62, w / h, 0.1, 180);
-        this.camera.position.set(0, 6.5, -11);
-        this.camera.lookAt(0, 1.5, 12);
-
+        this.renderer.setSize(w, h); this.renderer.setPixelRatio(1);
+        this.scene = new THREE.Scene(); this.scene.background = new THREE.Color(0x050512); this.scene.fog = new THREE.FogExp2(0x050512, 0.011);
+        this.camera = new THREE.PerspectiveCamera(62, w / h, 0.1, 180); this.camera.position.set(0, 6.5, -11); this.camera.lookAt(0, 1.5, 12);
         this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-        const dirLight = new THREE.DirectionalLight(0x00f0ff, 1.1);
-        dirLight.position.set(10, 25, -10);
-        this.scene.add(dirLight);
-
-        this.rimLight = new THREE.PointLight(0xff00aa, 1.5, 40);
-        this.rimLight.position.set(0, 5, 5);
-        this.scene.add(this.rimLight);
-
-        this.worldGroup = new THREE.Group();
-        this.scene.add(this.worldGroup);
-        this.activeObjects = [];
-        this.particles = [];
+        const dirLight = new THREE.DirectionalLight(0x00f0ff, 1.1); dirLight.position.set(10, 25, -10); this.scene.add(dirLight);
+        this.rimLight = new THREE.PointLight(0xff00aa, 1.5, 40); this.rimLight.position.set(0, 5, 5); this.scene.add(this.rimLight);
+        this.worldGroup = new THREE.Group(); this.scene.add(this.worldGroup);
+        this.activeObjects = []; this.particles = [];
     }
-
     initGeometries() {
         this.stageGeometries = [
-            new THREE.BoxGeometry(1.5, 1.5, 1.5),
-            new THREE.OctahedronGeometry(1.1, 0),
-            new THREE.DodecahedronGeometry(1.15, 0),
-            new THREE.TorusKnotGeometry(0.75, 0.28, 32, 8),
-            new THREE.IcosahedronGeometry(1.25, 1)
+            new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.OctahedronGeometry(1.1, 0),
+            new THREE.DodecahedronGeometry(1.15, 0), new THREE.TorusKnotGeometry(0.75, 0.28, 32, 8), new THREE.IcosahedronGeometry(1.25, 1)
         ];
         this.playerMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x005577, roughness: 0.2, metalness: 0.7 });
-        this.playerMesh = new THREE.Mesh(this.stageGeometries[0], this.playerMat);
-        this.playerMesh.position.set(0, 1.0, 0);
-        this.scene.add(this.playerMesh);
-
-        const auraGeo = new THREE.RingGeometry(1.1, 1.35, 24);
-        const auraMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
-        this.auraMesh = new THREE.Mesh(auraGeo, auraMat);
-        this.auraMesh.rotation.x = -Math.PI / 2;
-        this.auraMesh.position.y = 0.05;
-        this.scene.add(this.auraMesh);
-
-        this.gemGeo = new THREE.OctahedronGeometry(0.65, 0);
-        this.gemMat = new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xff6600 });
-        this.blockGeo = new THREE.BoxGeometry(2.4, 2.2, 1.6);
-        this.blockMat = new THREE.MeshStandardMaterial({ color: 0xff1144, emissive: 0x880011 });
-        this.laserGeo = new THREE.CylinderGeometry(0.28, 0.28, 2.8, 10);
-        this.laserMat = new THREE.MeshStandardMaterial({ color: 0xff0033, emissive: 0xff0022 });
-        this.spinnerGeo = new THREE.TorusGeometry(1.1, 0.25, 8, 16);
-        this.spinnerMat = new THREE.MeshStandardMaterial({ color: 0xff3300, emissive: 0x771100 });
+        this.playerMesh = new THREE.Mesh(this.stageGeometries[0], this.playerMat); this.playerMesh.position.set(0, 1.0, 0); this.scene.add(this.playerMesh);
+        this.auraMesh = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.35, 24), new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide, transparent: true, opacity: 0.6 }));
+        this.auraMesh.rotation.x = -Math.PI / 2; this.auraMesh.position.y = 0.05; this.scene.add(this.auraMesh);
+        this.gemGeo = new THREE.OctahedronGeometry(0.65, 0); this.gemMat = new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xff6600 });
+        this.blockGeo = new THREE.BoxGeometry(2.4, 2.2, 1.6); this.blockMat = new THREE.MeshStandardMaterial({ color: 0xff1144, emissive: 0x880011 });
+        this.laserGeo = new THREE.CylinderGeometry(0.28, 0.28, 2.8, 10); this.laserMat = new THREE.MeshStandardMaterial({ color: 0xff0033, emissive: 0xff0022 });
+        this.spinnerGeo = new THREE.TorusGeometry(1.1, 0.25, 8, 16); this.spinnerMat = new THREE.MeshStandardMaterial({ color: 0xff3300, emissive: 0x771100 });
     }
-
     loadLevel(levelNum) {
         while (this.worldGroup.children.length > 0) this.worldGroup.remove(this.worldGroup.children[0]);
-        this.activeObjects = [];
-        this.levelData = LevelGenerator.generate(levelNum);
-        const len = this.levelData.trackLength;
-
+        this.activeObjects = []; this.levelData = LevelGenerator.generate(levelNum); const len = this.levelData.trackLength;
         const trackMesh = new THREE.Mesh(new THREE.BoxGeometry(11, 0.5, len + 40), new THREE.MeshStandardMaterial({ color: 0x0c1026 }));
-        trackMesh.position.set(0, -0.25, len / 2);
-        this.worldGroup.add(trackMesh);
-
-        const railGeo = new THREE.BoxGeometry(0.25, 0.4, len + 40);
-        const railMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
-        const leftRail = new THREE.Mesh(railGeo, railMat); leftRail.position.set(-5.5, 0.1, len / 2);
-        const rightRail = new THREE.Mesh(railGeo, railMat); rightRail.position.set(5.5, 0.1, len / 2);
-        this.worldGroup.add(leftRail, rightRail);
-
-        const grid = new THREE.GridHelper(len + 40, Math.floor((len + 40) / 4), 0x00f0ff, 0x162044);
-        grid.position.set(0, 0.02, len / 2);
-        this.worldGroup.add(grid);
-
+        trackMesh.position.set(0, -0.25, len / 2); this.worldGroup.add(trackMesh);
+        const railGeo = new THREE.BoxGeometry(0.25, 0.4, len + 40), railMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+        const lRail = new THREE.Mesh(railGeo, railMat); lRail.position.set(-5.5, 0.1, len / 2);
+        const rRail = new THREE.Mesh(railGeo, railMat); rRail.position.set(5.5, 0.1, len / 2);
+        this.worldGroup.add(lRail, rRail);
+        const grid = new THREE.GridHelper(len + 40, Math.floor((len + 40) / 4), 0x00f0ff, 0x162044); grid.position.set(0, 0.02, len / 2); this.worldGroup.add(grid);
         this.portalMesh = new THREE.Mesh(new THREE.TorusGeometry(4.5, 0.45, 12, 32), new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00aa44 }));
-        this.portalMesh.position.set(0, 3.2, len);
-        this.worldGroup.add(this.portalMesh);
-
+        this.portalMesh.position.set(0, 3.2, len); this.worldGroup.add(this.portalMesh);
         this.levelData.items.forEach(item => {
             let mesh;
             if (item.type === 'gem') mesh = new THREE.Mesh(this.gemGeo, this.gemMat);
             else if (item.type === 'block') mesh = new THREE.Mesh(this.blockGeo, this.blockMat);
             else if (item.type === 'low_laser') { mesh = new THREE.Mesh(this.laserGeo, this.laserMat); mesh.rotation.z = Math.PI / 2; }
             else mesh = new THREE.Mesh(this.spinnerGeo, this.spinnerMat);
-            mesh.position.set(item.x, item.y, item.z);
-            this.worldGroup.add(mesh);
+            mesh.position.set(item.x, item.y, item.z); this.worldGroup.add(mesh);
             this.activeObjects.push({ ...item, mesh, collected: false });
         });
-
-        this.playerX = 0; this.targetX = 0; this.playerY = 1.0; this.velY = 0;
-        this.isGrounded = true; this.playerZ = 0; this.levelCoins = 0;
-        this.evoPoints = 0; this.combo = 0; this.invincibleTimer = 0;
-        this.setEvolutionStage(0, false);
-        this.updateHUD();
+        this.playerX = 0; this.targetX = 0; this.playerY = 1.0; this.velY = 0; this.isGrounded = true;
+        this.playerZ = 0; this.levelCoins = 0; this.evoPoints = 0; this.combo = 0; this.invincibleTimer = 0;
+        this.setEvolutionStage(0, false); this.updateHUD();
     }
-
     setEvolutionStage(stageIdx, playFx = true) {
         const clamped = Math.min(EVOLUTION_STAGES.length - 1, Math.max(0, stageIdx));
         if (this.evoStage === clamped && playFx) return;
-        this.evoStage = clamped;
-        const cfg = EVOLUTION_STAGES[clamped];
+        this.evoStage = clamped; const cfg = EVOLUTION_STAGES[clamped];
         this.playerMesh.geometry = this.stageGeometries[clamped];
-        this.playerMat.color.setHex(cfg.color);
-        this.playerMat.emissive.setHex
+        this.playerMat.color.setHex(cfg.color); this.playerMat.emissive.setHex(cfg.emissive);
+        this.playerMesh.scale.setScalar(cfg.scale); this.auraMesh.material.color.setHex(cfg.color);
+        document.getElementById('evo-stage-name').textContent = cfg.name;
+        if (playFx) { this.sound.playEvolve(); this.spawnBurst(this.playerMesh.position, cfg.color, 18); }
+    }
+    spawnBurst(pos, colorHex, count = 12) {
+        const geo = new THREE.BoxGeometry(0.25, 0.25, 0.25), mat = new THREE.MeshBasicMaterial({ color: colorHex });
+        for (let i = 0; i < count; i++) {
+            const p = new THREE.Mesh(geo, mat); p.position.copy(pos);
+            p.userData.vel = new THREE.Vector3((Math.random() - 0.5) * 12, Math.random() * 10 + 2, (Math.random() - 0.5) * 12);
+            p.userData.life = 0.6; this.scene.add(p); this.particles.push(p);
+        }
+    }
+    startGame() { this.sound.unlock(); this.loadLevel(this.currentLevel); this.showScreen(null); this.state = 'PLAYING'; }
+    jump() { if (this.state !== 'PLAYING' || !this.isGrounded) return; this.velY = 16.5; this.isGrounded = false; this.sound.playJump(); }
+    pause() { if (this.state === 'PLAYING') { this.state = 'PAUSED'; this.showScreen('screen-pause'); } }
+    resume() { if (this.state === 'PAUSED') { this.showScreen(null); this.state = 'PLAYING'; } }
+    pauseForAd(flag) { this.adPaused = flag; }
+    triggerGameOver() {
+        this.state = 'GAMEOVER'; this.sound.playCrash(); this.spawnBurst(this.playerMesh.position, 0xff2244, 24);
+        this.playerMesh.visible = false; this.showScreen('screen-gameover');
+    }
+    revivePlayer() {
+        this.playerMesh.visible = true; this.invincibleTimer = 2.5; this.playerY = 1.0; this.velY = 0; this.isGrounded = true;
+        this.showScreen(null); this.state = 'PLAYING';
+    }
+    triggerLevelWin() {
+        this.state = 'WIN'; this.sound.playWin();
+        const bonus = 50 + this.levelCoins * 5 + (this.evoStage * 20);
+        this.lastWinBonus = bonus; this.coins += bonus; this.score += bonus * 10;
+        if (this.score > this.highScore) { this.highScore = this.score; localStorage.setItem('se3d_highscore', this.highScore); }
+        localStorage.setItem('se3d_coins', this.coins);
+        const nextLvl = this.currentLevel < 500 ? this.currentLevel + 1 : 1;
+        localStorage.setItem('se3d_level', nextLvl);
+        document.getElementById('win-lvl-num').textContent = this.currentLevel;
+        document.getElementById('win-coins').textContent = `+${bonus}`;
+        document.getElementById('btn-double-coins').disabled = false; document.getElementById('btn-double-coins').style.opacity = '1';
+        this.currentLevel = nextLvl; this.updateHUD(); this.showScreen('screen-win');
+    }
+    showScreen(id) { ['screen-menu', 'screen-win', 'screen-gameover', 'screen-pause'].forEach(s => document.getElementById(s).classList.toggle('hidden', s !== id)); }
+    updateHUD() {
+        document.getElementById('hud-level').textContent = this.currentLevel; document.getElementById('menu-lvl-num').textContent = this.currentLevel;
+        document.getElementById('hud-score').textContent = this.score; document.getElementById('hud-coins').textContent = this.coins;
+        document.getElementById('menu-highscore').textContent = this.highScore; document.getElementById('btn-mute').textContent = this.sound.muted ? '🔇' : '🔊';
+        const needed = this.levelData ? this.levelData.gemsNeededForMaxEvo : 10;
+        document.getElementById('evo-bar-fill').style.width = `${Math.min(100, (this.evoPoints / needed) * 100)}%`;
+    }
+    bindAction(id, fn) {
+        const el = document.getElementById(id); if (!el) return;
+        const handler = (e) => { e.preventDefault(); e.stopPropagation(); fn(e); };
+        el.addEventListener('click', handler); el.addEventListener('touchend', handler, { passive: false });
+    }
+    bindUI() {
+        this.bindAction('btn-play', () => this.portal.showAd(() => this.startGame()));
+        this.bindAction('btn-pause', () => this.pause());
+        this.bindAction('btn-resume', () => this.resume());
+        this.bindAction('btn-pause-home', () => { this.state = 'MENU'; this.playerMesh.visible = true; this.updateHUD(); this.showScreen('screen-menu'); });
+        this.bindAction('btn-home', () => { this.state = 'MENU'; this.playerMesh.visible = true; this.updateHUD(); this.showScreen('screen-menu'); });
+        this.bindAction('btn-mute', () => { this.sound.unlock(); this.sound.toggleMute(); this.updateHUD(); });
+        this.bindAction('btn-next-level', () => this.portal.showAd(() => this.startGame()));
+        this.bindAction('btn-retry', () => this.portal.showAd(() => this.startGame()));
+        this.bindAction('btn-double-coins', (e) => {
+            this.portal.showAd(() => {
+                this.coins += this.lastWinBonus; localStorage.setItem('se3d_coins', this.coins);
+                document.getElementById('win-coins').textContent = `+${this.lastWinBonus * 2} (2X!)`;
+                e.target.disabled = true; e.target.style.opacity = '0.5'; this.updateHUD();
+            });
+        });
+        this.bindAction('btn-revive', () => this.portal.showAd(() => this.revivePlayer()));
+        window.addEventListener('resize', () => {
+            const w = Math.max(300, window.innerWidth || 800), h = Math.max(200, window.innerHeight || 600);
+            this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.renderer.setSize(w, h);
+        });
+    }
+    bindControls() {
+        window.addEventListener('keydown', (e) => {
+            if (this.state !== 'PLAYING') return;
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.targetX = Math.max(-4.2, this.targetX - 3.2);
+            else if (e.code === 'ArrowRight' || e.code === 'KeyD') this.targetX = Math.min(4.2, this.targetX + 3.2);
+            else if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') this.jump();
+        });
+        let sx = 0, sy = 0, lx = 0; const canvas = document.getElementById('game-canvas');
+        canvas.addEventListener('touchstart', (e) => { this.sound.unlock(); if (this.state === 'PLAYING') { sx = e.touches[0].clientX; sy = e.touches[0].clientY; lx = sx; } }, { passive: true });
+        canvas.addEventListener('touchmove', (e) => { if (this.state === 'PLAYING') { const cx = e.touches[0].clientX; this.targetX = Math.max(-4.3, Math.min(4.3, this.targetX + ((cx - lx) / Math.max(300, window.innerWidth)) * 13)); lx = cx; } }, { passive: true });
+        canvas.addEventListener('touchend', (e) => { if (this.state === 'PLAYING') { const dy = sy - e.changedTouches[0].clientY, dx = Math.abs(sx - e.changedTouches[0].clientX); if (dy > 30 || (dx < 12 && Math.abs(dy) < 12)) this.jump(); } });
+    }
+    animate(now) {
+        requestAnimationFrame(this.animate);
+        const dt = Math.min(0.05, (now - this.lastTime) / 1000); this.lastTime = now;
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i]; p.position.addScaledVector(p.userData.vel, dt); p.userData.vel.y -= 25 * dt; p.userData.life -= dt;
+            p.scale.setScalar(Math.max(0.01, p.userData.life));
+            if (p.userData.life <= 0) { this.scene.remove(p); this.particles.splice(i, 1); }
+        }
+        if (this.state === 'PLAYING' && !this.adPaused) {
+            this.playerZ += this.levelData.speed * dt; this.score += Math.floor(this.levelData.speed * dt * 2);
+            this.playerX += (this.targetX - this.playerX) * Math.min(1, dt * 16);
+            if (!this.isGrounded) { this.playerY += this.velY * dt; this.velY -= 44 * dt; if (this.playerY <= 1.0) { this.playerY = 1.0; this.velY = 0; this.isGrounded = true; } }
+            if (this.invincibleTimer > 0) { this.invincibleTimer -= dt; this.playerMesh.visible = Math.floor(this.invincibleTimer * 16) % 2 === 0; } else this.playerMesh.visible = true;
+            this.playerMesh.position.set(this.playerX, this.playerY, this.playerZ); this.playerMesh.rotation.x += dt * 3.5; this.playerMesh.rotation.y += dt * 2.5;
+            this.auraMesh.position.set(this.playerX, 0.05, this.playerZ); this.rimLight.position.set(this.playerX, 5, this.playerZ + 4);
+            this.camera.position.x = this.playerX * 0.45; this.camera.position.z = this.playerZ - 11.5; this.camera.lookAt(this.playerX * 0.3, 1.8, this.playerZ + 12);
+            if (this.portalMesh) this.portalMesh.rotation.z += dt * 2;
+            for (let i = 0; i < this.activeObjects.length; i++) {
+                const obj = this.activeObjects[i]; if (obj.collected) continue;
+                if (obj.type === 'gem') obj.mesh.rotation.y += dt * 3; if (obj.type === 'spinner') obj.mesh.rotation.z += dt * 5;
+                const dz = Math.abs(obj.z - this.playerZ), dx = Math.abs(obj.x - this.playerX);
+                if (obj.type === 'gem') {
+                    if (dz < 1.4 && dx < 1.35 && Math.abs(obj.y - this.playerY) < 1.6) {
+                        obj.collected = true; obj.mesh.visible = false; this.levelCoins++; this.coins++; this.evoPoints++; this.combo++; this.score += 50;
+                        this.sound.playGem(this.combo); this.spawnBurst(obj.mesh.position, 0xffd700, 8);
+                        const ns = Math.floor((this.evoPoints / this.levelData.gemsNeededForMaxEvo) * EVOLUTION_STAGES.length);
+                        if (ns > this.evoStage) this.setEvolutionStage(ns, true);
+                    }
+                } else if (this.invincibleTimer <= 0) {
+                    if ((obj.type === 'low_laser' && dz < 0.85 && dx < 1.4 && this.playerY < 1.75) || (obj.type !== 'low_laser' && dz < 1.15 && dx < 1.35 && this.playerY < 2.2)) {
+                        this.triggerGameOver(); break;
+                    }
+                }
+            }
+            this.updateHUD();
+            if (this.playerZ >= this.levelData.trackLength) this.triggerLevelWin();
+        } else if (this.state === 'MENU') { this.playerMesh.rotation.y += dt * 1.5; this.playerMesh.rotation.x += dt * 0.8; }
+        this.renderer.render(this.scene, this.camera);
+    }
+}
+window.addEventListener('DOMContentLoaded', () => { window.game = new ShapeEvolutionGame(); });
+</script>
+</body>
+</html>
